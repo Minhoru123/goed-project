@@ -1,4 +1,5 @@
 # Utah Startup State
+LINK : https://utahstartup.netlify.app/
 
 Hackathon platform for the Utah Governor's Office of Economic Development. Two pages of one app:
 

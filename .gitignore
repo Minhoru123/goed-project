@@ -7,6 +7,9 @@ dist
 .DS_Store
 .vite
 .claude/
-data/
-netlify/
-netlify.toml
+
+# Generated function bundle (Netlify build target — built from /api at deploy time)
+/functions/
+
+# ETL geocode cache
+/scripts/.geocache.json

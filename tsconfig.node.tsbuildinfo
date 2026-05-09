@@ -1,1 +1,1 @@
-{"root":["./vite.config.ts","./netlify/functions/claude.ts","./netlify/functions/filter-companies.ts"],"version":"5.9.3"}
+{"root":["./vite.config.ts","./api/claude.ts","./api/filter-companies.ts","./api/resources.ts","./api/_lib/catalog.ts"],"version":"5.9.3"}

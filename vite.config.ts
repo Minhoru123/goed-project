@@ -2,14 +2,13 @@ import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { config as loadEnv } from 'dotenv';
 
-// Load .env into process.env so the dev API middleware can read ANTHROPIC_API_KEY.
+// Load .env into process.env so the dev API middleware can read server-side keys.
 loadEnv();
 
-// Dev-only middleware that proxies /api/<name> to netlify/functions/<name>.ts,
-// so we don't need the Netlify CLI during local development.
-function devNetlifyFunctions(): Plugin {
+// Dev-only middleware that proxies /api/<name> to api/<name>.ts.
+function devApiHandlers(): Plugin {
   return {
-    name: 'dev-netlify-functions',
+    name: 'dev-api-handlers',
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
@@ -26,7 +25,7 @@ function devNetlifyFunctions(): Plugin {
           return;
         }
         try {
-          const mod = await server.ssrLoadModule(`/netlify/functions/${fnName}.ts`);
+          const mod = await server.ssrLoadModule(`/api/${fnName}.ts`);
           const handler = mod.default as (req: Request, ctx: unknown) => Promise<Response>;
 
           const chunks: Buffer[] = [];
@@ -70,7 +69,7 @@ function devNetlifyFunctions(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), devNetlifyFunctions()],
+  plugins: [react(), devApiHandlers()],
   server: {
     port: 5173,
   },

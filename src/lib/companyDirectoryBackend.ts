@@ -1,5 +1,6 @@
 import type { Company } from '../types';
 import { normalizeUrl } from './companyMeta';
+import { geocodeAddress } from './geocode';
 import { requireSupabase } from './supabase';
 
 export type MembershipRole = 'owner' | 'editor';
@@ -27,6 +28,8 @@ export interface CompanyProfileInput {
   photoUrl: string | null;
   photoUrls: string[];
   contactEmail: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 type CompanyRow = {
@@ -86,6 +89,11 @@ function mapCompany(row: CompanyRow): Company {
 }
 
 function buildCompanyPayload(profile: CompanyProfileInput, userId?: string) {
+  const coordinates =
+    typeof profile.lat === 'number' && typeof profile.lng === 'number'
+      ? { lat: profile.lat, lng: profile.lng }
+      : {};
+
   return {
     name: profile.name.trim(),
     website: normalizeUrl(profile.website),
@@ -102,9 +110,17 @@ function buildCompanyPayload(profile: CompanyProfileInput, userId?: string) {
     photo_url: normalizeUrl(profile.photoUrl ?? profile.photoUrls[0] ?? null),
     photo_urls: profile.photoUrls.map((url) => normalizeUrl(url)).filter((url): url is string => !!url),
     contact_email: profile.contactEmail?.trim() || null,
+    ...coordinates,
     updated_at: new Date().toISOString(),
     ...(userId ? { created_by_user_id: userId } : {}),
   };
+}
+
+function buildGeocodeQuery(profile: CompanyProfileInput): string {
+  const address = profile.address.trim();
+  const city = profile.city?.trim();
+  const includesCity = city ? address.toLowerCase().includes(city.toLowerCase()) : false;
+  return [address, includesCity ? null : city, 'Utah', 'USA'].filter(Boolean).join(', ');
 }
 
 async function insertMembership(companyId: string, userId: string) {
@@ -160,13 +176,15 @@ export async function getActiveMembership(companyId: string, userId: string): Pr
 export async function createCompanyWithOwner(userId: string, profile: CompanyProfileInput): Promise<Company> {
   const supabase = requireSupabase();
   const baseId = slugCompanyName(profile.name) || 'company';
+  const coordinates = await geocodeAddress(buildGeocodeQuery(profile));
+  const profileWithCoordinates = coordinates ? { ...profile, ...coordinates } : profile;
 
   const attemptInsert = async (companyId: string) => {
     const { data, error } = await supabase
       .from('companies')
       .insert({
         id: companyId,
-        ...buildCompanyPayload(profile, userId),
+        ...buildCompanyPayload(profileWithCoordinates, userId),
       })
       .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
       .single();

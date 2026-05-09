@@ -62,6 +62,7 @@ const STARTERS = [
 
 export default function Navigator() {
   const [resources, setResources] = useState<Resource[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(true);
   const [input, setInput] = useState('');
   const [journeyStep, setJourneyStep] = useState<number | null>(null);
   const [output, setOutput] = useState('');
@@ -79,9 +80,23 @@ export default function Navigator() {
   }
 
   useEffect(() => {
+    let mounted = true;
     loadResources()
-      .then(setResources)
-      .catch((e: Error) => setError(`Couldn't load resources.json — run \`npm run data\` first. (${e.message})`));
+      .then((loaded) => {
+        if (!mounted) return;
+        setResources(loaded);
+        setError(null);
+      })
+      .catch((e: Error) => {
+        if (!mounted) return;
+        setError(`Couldn't load resources.json — run \`npm run data\` first. (${e.message})`);
+      })
+      .finally(() => {
+        if (mounted) setResourcesLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Apply ?scenario=<slug> from the home page Judge Mode cards (pre-fills input + step).
@@ -99,7 +114,11 @@ export default function Navigator() {
     const value = (text ?? input).trim();
     if (!value || streaming) return;
     if (resources.length === 0) {
-      setError('Resources not loaded yet — try again in a moment.');
+      setError(
+        resourcesLoading
+          ? 'Resources are still loading — try again in a moment.'
+          : 'Resources could not be loaded. Refresh and try again.'
+      );
       return;
     }
     setError(null);
@@ -136,6 +155,13 @@ export default function Navigator() {
   const hasResult = output.length > 0 || streaming;
   const briefing = useMemo(() => (streaming ? null : parseBriefing(output)), [output, streaming]);
   const visibleMarkdown = stripBriefingBlock(output);
+  const resourcesReady = resources.length > 0;
+  const resourcesUnavailable = !resourcesLoading && !resourcesReady;
+  const resourceSubmitLabel = resourcesLoading
+    ? 'Loading resources…'
+    : resourcesUnavailable
+      ? 'Resources unavailable'
+      : undefined;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -174,7 +200,12 @@ export default function Navigator() {
 
       {!hasResult && mode === 'quiz' && persona === 'founder' && (
         <div className="card">
-          <FounderQuiz onSubmit={submitProfile} disabled={streaming} />
+          <FounderQuiz
+            onSubmit={submitProfile}
+            disabled={streaming}
+            submitDisabled={!resourcesReady}
+            submitLabel={resourceSubmitLabel}
+          />
           <div className="mt-6 border-t border-utah-stone/10 pt-4 text-center">
             <button
               type="button"
@@ -239,7 +270,7 @@ export default function Navigator() {
                   type="button"
                   onClick={() => submit(s)}
                   className="rounded-full border border-utah-stone/20 bg-utah-slate px-3 py-1.5 text-xs text-utah-stone hover:border-utah-gold/60 hover:bg-utah-gold/10"
-                  disabled={streaming || resources.length === 0}
+                  disabled={streaming || !resourcesReady}
                 >
                   {s.length > 60 ? s.slice(0, 60) + '…' : s}
                 </button>
@@ -249,10 +280,18 @@ export default function Navigator() {
 
           <div className="mt-4 flex items-center justify-between">
             <span className="text-xs text-utah-stone/85">
-              {resources.length > 0 ? `${resources.length} resources loaded` : 'Loading resources…'}
+              {resourcesReady
+                ? `${resources.length} resources loaded`
+                : resourcesUnavailable
+                  ? 'Resources unavailable'
+                  : 'Loading resources…'}
             </span>
-            <button className="btn-primary text-sm" onClick={() => submit()} disabled={streaming || !input.trim()}>
-              {streaming ? 'Matching…' : 'Get matched'}
+            <button
+              className="btn-primary text-sm"
+              onClick={() => submit()}
+              disabled={streaming || !input.trim() || !resourcesReady}
+            >
+              {streaming ? 'Matching…' : resourceSubmitLabel ?? 'Get matched'}
             </button>
           </div>
         </div>

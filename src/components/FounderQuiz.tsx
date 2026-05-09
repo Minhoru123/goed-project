@@ -42,6 +42,8 @@ export interface FounderProfile {
 interface Props {
   onSubmit: (profile: FounderProfile, derivedJourneyStep: number) => void;
   disabled?: boolean;
+  submitDisabled?: boolean;
+  submitLabel?: string;
 }
 
 const BUSINESS_TYPES: { id: BusinessType; label: string; subtitle: string }[] = [
@@ -106,7 +108,7 @@ function deriveJourneyStep(stage: Stage, needs: Need[]): number {
   return 13;
 }
 
-export default function FounderQuiz({ onSubmit, disabled }: Props) {
+export default function FounderQuiz({ onSubmit, disabled, submitDisabled, submitLabel }: Props) {
   const [step, setStep] = useState(0);
   const [businessType, setBusinessType] = useState<BusinessType | null>(null);
   const [region, setRegion] = useState<Region | null>(null);
@@ -315,10 +317,10 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
           <button
             type="button"
             onClick={submit}
-            disabled={!businessType || !region || !stage || disabled}
+            disabled={!businessType || !region || !stage || disabled || submitDisabled}
             className="btn-primary text-sm"
           >
-            {disabled ? 'Matching…' : 'Get my matches →'}
+            {submitLabel ?? (disabled ? 'Matching…' : 'Get my matches →')}
           </button>
         )}
       </div>

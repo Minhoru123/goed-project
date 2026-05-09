@@ -201,7 +201,10 @@ export async function loadResourceCatalog(): Promise<ResourceCatalogItem[]> {
   if (resourcesUrl) {
     try {
       const rows = await readSheetRowsFromUrl(resourcesUrl);
-      return buildResources(rows);
+      const liveResources = buildResources(rows);
+      if (liveResources.length > 0) {
+        return liveResources;
+      }
     } catch {
       // Fall back to the checked-in catalog so the app still works if the live sheet is unavailable.
     }

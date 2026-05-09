@@ -119,6 +119,9 @@ export async function loadResources(): Promise<Resource[]> {
     if (!Array.isArray(data) || !data.every(isResource)) {
       throw new Error('Live resource payload has an invalid shape');
     }
+    if (data.length === 0) {
+      throw new Error('Live resource payload is empty');
+    }
     return data;
   } catch (liveError) {
     try {

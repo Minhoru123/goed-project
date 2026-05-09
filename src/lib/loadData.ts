@@ -1,4 +1,6 @@
 import type { Company, Resource } from '../types';
+import { listLiveCompanies } from './companyDirectoryBackend';
+import { isSupabaseEnabled } from './supabase';
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
@@ -64,22 +66,51 @@ function isCompany(value: unknown): value is Company {
   );
 }
 
-export async function loadResources(): Promise<Resource[]> {
-  const res = await fetch('/data/resources.json');
-  if (!res.ok) throw new Error('Failed to load resources.json');
-  const data = (await res.json()) as unknown;
+async function loadStaticResources(): Promise<Resource[]> {
+  const response = await fetch('/data/resources.json');
+  if (!response.ok) throw new Error('Failed to load resources.json');
+  const data = (await response.json()) as unknown;
   if (!Array.isArray(data) || !data.every(isResource)) {
     throw new Error('resources.json has an invalid shape');
   }
   return data;
 }
 
-export async function loadCompanies(): Promise<Company[]> {
-  const res = await fetch('/data/companies.json');
-  if (!res.ok) throw new Error('Failed to load companies.json');
-  const data = (await res.json()) as unknown;
+async function loadStaticCompanies(): Promise<Company[]> {
+  const response = await fetch('/data/companies.json');
+  if (!response.ok) throw new Error('Failed to load companies.json');
+  const data = (await response.json()) as unknown;
   if (!Array.isArray(data) || !data.every(isCompany)) {
     throw new Error('companies.json has an invalid shape');
   }
   return data;
+}
+
+export async function loadResources(): Promise<Resource[]> {
+  try {
+    const response = await fetch('/api/resources');
+    if (!response.ok) {
+      throw new Error(`Failed to load live resources (${response.status})`);
+    }
+    const data = (await response.json()) as unknown;
+    if (!Array.isArray(data) || !data.every(isResource)) {
+      throw new Error('Live resource payload has an invalid shape');
+    }
+    return data;
+  } catch {
+    return loadStaticResources();
+  }
+}
+
+export async function loadCompanies(): Promise<Company[]> {
+  if (!isSupabaseEnabled) {
+    return loadStaticCompanies();
+  }
+
+  try {
+    const companies = await listLiveCompanies();
+    return companies.length > 0 ? companies : loadStaticCompanies();
+  } catch {
+    return loadStaticCompanies();
+  }
 }

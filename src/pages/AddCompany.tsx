@@ -153,124 +153,102 @@ export default function AddCompany() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="space-y-5">
-          <div className="rounded-3xl border border-utah-gold/20 bg-gradient-to-br from-utah-navy via-utah-dark to-utah-slate p-8 shadow-2xl shadow-black/25">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-utah-gold">Ownership and operations</p>
-            <h1 className="mt-3 font-display text-4xl font-bold text-utah-stone">Claim, update, or add a company without engineering help.</h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-utah-stone/75">
-              This flow closes three brief gaps at once: dedicated company pages, a real claim/update path, and a no-developer intake process the GOED team can operate from forms.
-            </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <Stat label="Profiles" value="Dedicated URLs" />
-              <Stat label="Verification" value="Domain-based" />
-              <Stat label="Ops handoff" value="Netlify-ready" />
-            </div>
-          </div>
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <section className="mb-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-utah-gold">Company updates</p>
+        <h1 className="mt-3 font-display text-4xl font-bold text-utah-stone">Add, claim, or update a company.</h1>
+        <p className="mt-3 max-w-2xl text-base text-utah-stone/72">
+          Pick one path and complete it. This pass keeps the workflow visible without turning the page into a briefing.
+        </p>
+      </section>
 
-          <div className="rounded-3xl border border-utah-stone/10 bg-utah-slate p-3">
-            <div className="grid gap-2 sm:grid-cols-3">
-              <ModeButton active={mode === 'add'} title="Add new listing" body="For founders not in the directory yet." onClick={() => switchMode('add')} />
-              <ModeButton active={mode === 'claim'} title="Claim or update" body="For existing listings that need ownership or edits." onClick={() => switchMode('claim')} />
-              <ModeButton active={mode === 'ops'} title="Ops workflow" body="Show the non-technical update path for staff." onClick={() => switchMode('ops')} />
-            </div>
-          </div>
+      <section className="mb-6 rounded-3xl border border-utah-stone/10 bg-utah-slate p-3">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <ModeButton active={mode === 'add'} title="Add new listing" body="For companies not in the directory yet." onClick={() => switchMode('add')} />
+          <ModeButton active={mode === 'claim'} title="Claim or update" body="For existing listings." onClick={() => switchMode('claim')} />
+          <ModeButton active={mode === 'ops'} title="Ops workflow" body="For the review process." onClick={() => switchMode('ops')} />
+        </div>
+      </section>
 
-          <div className="rounded-3xl border border-utah-stone/10 bg-utah-slate p-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">What this solves</p>
-            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-utah-stone/78">
-              <li>Every company can now have a dedicated profile URL instead of living only inside a map popup.</li>
-              <li>Existing companies can request ownership or updates through a separate claim path.</li>
-              <li>Verification is lightweight but real: the claimant must use an email domain that matches the listed company website.</li>
-              <li>The ops workflow is visible to non-technical reviewers, so the update path is no longer implicit.</li>
-            </ul>
-          </div>
-        </section>
+      <section className="space-y-5">
+        {mode === 'add' && (
+          <AddCompanyForm status={status} onSubmit={submitAdd} />
+        )}
 
-        <section className="space-y-5">
-          {mode === 'add' && (
-            <AddCompanyForm status={status} onSubmit={submitAdd} />
-          )}
-
-          {mode === 'claim' && (
-            <div className="space-y-5">
-              <div className="card">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Claim existing listing</p>
-                    <h2 className="mt-2 font-display text-3xl font-bold">Select the company you control</h2>
-                    <p className="mt-2 max-w-2xl text-sm text-utah-stone/72">
-                      To keep this lightweight and implementable without a full auth backend, ownership is verified by matching the work email domain against the public company website domain.
-                    </p>
-                  </div>
-                  {selectedCompany && (
-                    <Link to={`/companies/${selectedCompany.id}`} className="btn-secondary text-sm">
-                      Open current profile
-                    </Link>
-                  )}
+        {mode === 'claim' && (
+          <div className="space-y-5">
+            <div className="card">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Claim existing listing</p>
+                  <h2 className="mt-2 font-display text-3xl font-bold">Select your company</h2>
                 </div>
-
-                <div className="mt-5 rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
-                  <label className="text-sm">
-                    <span className="mb-2 block font-medium text-utah-stone">Find your company</span>
-                    <input
-                      value={companySearch}
-                      onChange={(e) => setCompanySearch(e.target.value)}
-                      placeholder="Search by company, city, or sector"
-                      className="w-full rounded-xl border border-utah-stone/20 px-3 py-3"
-                    />
-                  </label>
-                  <div className="mt-4 grid gap-2">
-                    {filteredCompanies.map((company) => {
-                      const city = cleanCity(company.city, company.address, knownCities);
-                      const selected = selectedCompanyId === company.id;
-                      return (
-                        <button
-                          key={`${company.id}-${company.name}`}
-                          type="button"
-                          onClick={() => selectCompany(company.id)}
-                          className={`rounded-2xl border px-4 py-3 text-left transition ${
-                            selected
-                              ? 'border-utah-gold bg-utah-gold/10'
-                              : 'border-utah-stone/10 bg-utah-dark/35 hover:border-utah-gold/40'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-utah-stone">{company.name}</div>
-                              <div className="mt-1 text-xs text-utah-stone/60">
-                                {[city, company.sector, company.stage].filter(Boolean).join(' · ')}
-                              </div>
-                            </div>
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/45">
-                              {selected ? 'Selected' : 'Choose'}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {selectedCompany && (
+                  <Link to={`/companies/${selectedCompany.id}`} className="btn-secondary text-sm">
+                    Open profile
+                  </Link>
+                )}
               </div>
 
-              <ClaimUpdateForm
-                company={selectedCompany}
-                knownCities={knownCities}
-                claimEmail={claimEmail}
-                claimStatus={claimStatus}
-                verificationLabel={claimVerification.label}
-                verificationOk={claimVerification.ok}
-                verificationTone={claimVerification.tone}
-                onEmailChange={setClaimEmail}
-                onSubmit={submitClaim}
-              />
+              <div className="mt-5 rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
+                <label className="text-sm">
+                  <span className="mb-2 block font-medium text-utah-stone">Find your company</span>
+                  <input
+                    value={companySearch}
+                    onChange={(e) => setCompanySearch(e.target.value)}
+                    placeholder="Search by company, city, or sector"
+                    className="w-full rounded-xl border border-utah-stone/20 px-3 py-3"
+                  />
+                </label>
+                <div className="mt-4 grid gap-2">
+                  {filteredCompanies.map((company) => {
+                    const city = cleanCity(company.city, company.address, knownCities);
+                    const selected = selectedCompanyId === company.id;
+                    return (
+                      <button
+                        key={`${company.id}-${company.name}`}
+                        type="button"
+                        onClick={() => selectCompany(company.id)}
+                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+                          selected
+                            ? 'border-utah-gold bg-utah-gold/10'
+                            : 'border-utah-stone/10 bg-utah-dark/35 hover:border-utah-gold/40'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-utah-stone">{company.name}</div>
+                            <div className="mt-1 text-xs text-utah-stone/60">
+                              {[city, company.sector, company.stage].filter(Boolean).join(' · ')}
+                            </div>
+                          </div>
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/45">
+                            {selected ? 'Selected' : 'Choose'}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          )}
 
-          {mode === 'ops' && <OpsWorkflow />}
-        </section>
-      </div>
+            <ClaimUpdateForm
+              company={selectedCompany}
+              knownCities={knownCities}
+              claimEmail={claimEmail}
+              claimStatus={claimStatus}
+              verificationLabel={claimVerification.label}
+              verificationOk={claimVerification.ok}
+              verificationTone={claimVerification.tone}
+              onEmailChange={setClaimEmail}
+              onSubmit={submitClaim}
+            />
+          </div>
+        )}
+
+        {mode === 'ops' && <OpsWorkflow />}
+      </section>
     </div>
   );
 }
@@ -287,7 +265,7 @@ function AddCompanyForm({
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">New listing intake</p>
       <h2 className="mt-2 font-display text-3xl font-bold">Add a company to the directory</h2>
       <p className="mt-2 max-w-2xl text-sm text-utah-stone/72">
-        Use this when the company is not in the map yet. Submissions land in a non-technical review queue through Netlify forms.
+        Use this when the company is not in the directory yet.
       </p>
 
       <form name="company-submission" data-netlify="true" netlify-honeypot="bot-field" className="mt-6 space-y-4" onSubmit={onSubmit}>
@@ -323,13 +301,13 @@ function AddCompanyForm({
         </label>
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-utah-stone/55">No developer needed: this request can be collected and triaged from Netlify form submissions.</p>
+          <p className="text-xs text-utah-stone/55">Submitted through the Netlify intake form.</p>
           <button className="btn-primary text-sm" type="submit" disabled={status === 'submitting'}>
             {status === 'submitting' ? 'Submitting…' : 'Submit new listing'}
           </button>
         </div>
 
-        {status === 'success' && <Notice tone="success" text="New listing submitted. It now enters the review queue with enough data to publish without engineering intervention." />}
+        {status === 'success' && <Notice tone="success" text="New listing submitted for review." />}
         {status === 'error' && <Notice tone="error" text="Submission failed. Keep the fields and try again." />}
       </form>
     </div>
@@ -365,7 +343,7 @@ function ClaimUpdateForm({
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Claim and update workflow</p>
       <h2 className="mt-2 font-display text-3xl font-bold">Submit ownership and changes</h2>
       <p className="mt-2 max-w-2xl text-sm text-utah-stone/72">
-        This is the lightweight verification method: the claimant must use a work email on the same domain as the listed website before the update request can be submitted.
+        Use a work email that matches the company website domain.
       </p>
 
       {company ? (
@@ -425,15 +403,13 @@ function ClaimUpdateForm({
         <Notice tone={verificationTone} text={verificationLabel} />
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-utah-stone/55">
-            Only verified work-email requests can be submitted through this prototype claim flow.
-          </p>
+          <p className="text-xs text-utah-stone/55">Only verified work-email requests can be submitted.</p>
           <button className="btn-primary text-sm" type="submit" disabled={!verificationOk || claimStatus === 'submitting'}>
             {claimStatus === 'submitting' ? 'Submitting…' : 'Submit claim/update'}
           </button>
         </div>
 
-        {claimStatus === 'success' && <Notice tone="success" text="Claim/update submitted. The review queue now has the company id, claimant identity, and domain verification result." />}
+        {claimStatus === 'success' && <Notice tone="success" text="Claim/update submitted for review." />}
         {claimStatus === 'error' && <Notice tone="error" text="Submission failed. Keep the form open and try again." />}
       </form>
     </div>
@@ -442,12 +418,12 @@ function ClaimUpdateForm({
 
 function OpsWorkflow() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="card">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Non-technical operations path</p>
-        <h2 className="mt-2 font-display text-3xl font-bold">How staff can keep the directory current without a developer</h2>
+        <h2 className="mt-2 font-display text-3xl font-bold">How staff can keep the directory current</h2>
         <p className="mt-2 max-w-2xl text-sm text-utah-stone/72">
-          This is the explicit admin story the brief was missing. New listings and claim/update requests land in forms, which means an operator can review and publish from a repeatable queue instead of asking engineering for every content change.
+          Keep the process simple: collect, verify, publish.
         </p>
       </div>
 
@@ -455,33 +431,6 @@ function OpsWorkflow() {
         <OpsCard step="1" title="Collect requests" body="Use Netlify form submissions as the intake queue for new listings and claim/update requests." />
         <OpsCard step="2" title="Verify ownership" body="For existing listings, only accept updates from work emails that match the company website domain captured in the request." />
         <OpsCard step="3" title="Publish changes" body="Copy approved field changes into the company dataset or spreadsheet source of truth, then rerun the ETL/data publish step." />
-      </div>
-
-      <div className="card">
-        <h3 className="font-display text-2xl font-bold">Recommended lightweight operating model</h3>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">Inputs</p>
-            <ul className="mt-3 space-y-2 text-sm text-utah-stone/78">
-              <li>New listing form</li>
-              <li>Claim/update form</li>
-              <li>Domain verification result</li>
-              <li>Company id and requested field changes</li>
-            </ul>
-          </div>
-          <div className="rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">Outputs</p>
-            <ul className="mt-3 space-y-2 text-sm text-utah-stone/78">
-              <li>Published company profile page</li>
-              <li>Updated map listing</li>
-              <li>Clear audit trail of who requested the change</li>
-              <li>No engineering dependency for copy/data review</li>
-            </ul>
-          </div>
-        </div>
-        <p className="mt-4 text-sm text-utah-stone/68">
-          This is still lightweight, not enterprise identity management. But it materially improves the brief gap by providing a real repeatable update workflow rather than a static demo form.
-        </p>
       </div>
     </div>
   );
@@ -511,15 +460,6 @@ function ModeButton({
       <div className={`font-semibold ${active ? 'text-utah-gold' : 'text-utah-stone'}`}>{title}</div>
       <div className="mt-1 text-xs leading-relaxed text-utah-stone/62">{body}</div>
     </button>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">{label}</p>
-      <p className="mt-2 font-display text-xl font-bold text-utah-stone">{value}</p>
-    </div>
   );
 }
 

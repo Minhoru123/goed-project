@@ -22,9 +22,11 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
             Utah startup profile
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className={`${compact ? 'text-2xl' : 'text-4xl'} font-display font-bold text-utah-stone`}>
-              {company.name}
-            </h1>
+            {compact && (
+              <h2 className="text-2xl font-display font-bold text-utah-stone">
+                {company.name}
+              </h2>
+            )}
             {company.stage && (
               <span className="rounded-full border border-utah-gold/40 bg-utah-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-utah-gold">
                 {company.stage}

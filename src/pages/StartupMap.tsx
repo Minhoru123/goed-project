@@ -385,7 +385,7 @@ export default function StartupMap() {
         <div>
           <h1 className="font-display text-3xl font-bold">Utah Startup Map</h1>
           <p className="mt-1 text-sm text-utah-stone/70">
-            {placed.length} mapped · {filtered.length} matching filters
+            {placed.length} mapped · {filtered.length} showing
           </p>
         </div>
       </div>
@@ -399,11 +399,11 @@ export default function StartupMap() {
       <div className="card mb-4 border-utah-gold/30">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-utah-gold">
-            AI search · ask in plain English
+            AI search
           </p>
           {aiResult && (
             <button className="text-xs text-utah-gold hover:underline" onClick={clearAi} type="button">
-              Clear AI filter
+              Clear
             </button>
           )}
         </div>
@@ -463,9 +463,7 @@ export default function StartupMap() {
         {aiError && <p className="mt-2 text-xs text-red-400">{aiError}</p>}
         {aiResult && (
           <div className="mt-3 rounded-md border border-utah-gold/30 bg-utah-gold/5 p-3 text-xs text-utah-stone/80">
-            <p className="font-semibold text-utah-gold">Showing {aiResult.ids.size} matches</p>
-            <p className="mt-1 italic text-utah-stone/70">{aiResult.reasoning}</p>
-            {aiResult.summary && <p className="mt-2">{aiResult.summary}</p>}
+            <p className="font-semibold text-utah-gold">Showing {aiResult.ids.size} AI matches</p>
           </div>
         )}
       </div>

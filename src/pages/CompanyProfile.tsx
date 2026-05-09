@@ -51,10 +51,7 @@ export default function CompanyProfile() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Company directory</p>
-          <h1 className="mt-2 font-display text-4xl font-bold">Dedicated profile page</h1>
-          <p className="mt-3 max-w-2xl text-base text-utah-stone/75">
-            Rich company profiles are now available outside the map popup so operators, founders, and investors can share a stable URL.
-          </p>
+          <h1 className="mt-2 font-display text-4xl font-bold">{company.name}</h1>
         </div>
         <div className="flex gap-2">
           <Link to="/map" className="btn-secondary text-sm">

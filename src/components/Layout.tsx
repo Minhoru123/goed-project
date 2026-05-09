@@ -9,22 +9,14 @@ export default function Layout() {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-utah-gold/30 bg-utah-gold/10 text-sm text-utah-gold" aria-hidden>
               UT
             </span>
-            <span>
-              Utah Startup State
-              <span className="block font-sans text-[10px] font-semibold uppercase tracking-[0.16em] text-utah-stone/45">
-                Founder entrypoint and ecosystem map
-              </span>
-            </span>
+            <span>Utah Startup State</span>
           </Link>
           <div className="flex items-center gap-3">
             <nav className="hidden items-center gap-1 text-sm font-medium md:flex">
-              <NavItem to="/navigator">Founder's Navigator</NavItem>
-              <NavItem to="/map">Startup Map</NavItem>
-              <NavItem to="/add-company">Claim or update</NavItem>
+              <NavItem to="/navigator">Navigator</NavItem>
+              <NavItem to="/map">Map</NavItem>
+              <NavItem to="/add-company">Add company</NavItem>
             </nav>
-            <Link to="/add-company" className="btn-primary px-3 py-2 text-sm">
-              Claim or add company
-            </Link>
           </div>
         </div>
       </header>
@@ -32,21 +24,8 @@ export default function Layout() {
         <Outlet />
       </main>
       <footer className="border-t border-utah-stone/10 bg-utah-dark/70">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-utah-stone/60 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="font-semibold text-utah-stone">Built for Utah startup discovery.</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.14em] text-utah-stone/45">
-              Founder navigator · startup map · claim/update workflow
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link to="/navigator" className="btn-secondary px-3 py-2 text-xs">
-              Founder path
-            </Link>
-            <Link to="/map" className="btn-secondary px-3 py-2 text-xs">
-              Explore map
-            </Link>
-          </div>
+        <div className="mx-auto max-w-7xl px-4 py-5 text-center text-sm text-utah-stone/55">
+          Utah startup discovery for founders, operators, and ecosystem partners.
         </div>
       </footer>
     </div>

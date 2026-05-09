@@ -202,6 +202,106 @@ export async function claimCompanyOwnership(companyId: string, userId: string): 
   return membership;
 }
 
+// ---------- Admin / staff approval queue ----------
+
+export type ReviewStatus = 'pending' | 'approved' | 'denied' | 'rejected';
+
+export interface PendingClaimRequest {
+  id: string;
+  companyId: string;
+  companyName: string;
+  claimantEmail: string;
+  claimantName: string;
+  claimantRole: string;
+  requestedChanges: string;
+  proposedProfileData: string | null;
+  websiteDomain: string | null;
+  verificationStatus: 'verified' | 'failed';
+  reviewStatus: ReviewStatus;
+  createdAt: string;
+}
+
+export interface PendingUpdateRequest {
+  id: string;
+  companyId: string;
+  companyName: string;
+  requesterEmail: string;
+  requesterName: string;
+  requesterRole: string;
+  requestedChanges: string;
+  proposedProfileData: string | null;
+  reviewStatus: ReviewStatus;
+  createdAt: string;
+}
+
+export async function listPendingClaimRequests(): Promise<PendingClaimRequest[]> {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('company_claim_requests')
+    .select('id, company_id, company_name, claimant_email, claimant_name, claimant_role, requested_changes, proposed_profile_data, website_domain, verification_status, review_status, created_at')
+    .eq('review_status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    companyId: row.company_id as string,
+    companyName: row.company_name as string,
+    claimantEmail: row.claimant_email as string,
+    claimantName: row.claimant_name as string,
+    claimantRole: row.claimant_role as string,
+    requestedChanges: row.requested_changes as string,
+    proposedProfileData: (row.proposed_profile_data as string | null) ?? null,
+    websiteDomain: (row.website_domain as string | null) ?? null,
+    verificationStatus: row.verification_status as 'verified' | 'failed',
+    reviewStatus: row.review_status as ReviewStatus,
+    createdAt: row.created_at as string,
+  }));
+}
+
+export async function listPendingUpdateRequests(): Promise<PendingUpdateRequest[]> {
+  const supabase = requireSupabase();
+  const { data, error } = await supabase
+    .from('company_update_requests')
+    .select('id, company_id, company_name, requester_email, requester_name, requester_role, requested_changes, proposed_profile_data, review_status, created_at')
+    .eq('review_status', 'pending')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    companyId: row.company_id as string,
+    companyName: row.company_name as string,
+    requesterEmail: row.requester_email as string,
+    requesterName: row.requester_name as string,
+    requesterRole: row.requester_role as string,
+    requestedChanges: row.requested_changes as string,
+    proposedProfileData: (row.proposed_profile_data as string | null) ?? null,
+    reviewStatus: row.review_status as ReviewStatus,
+    createdAt: row.created_at as string,
+  }));
+}
+
+export async function setClaimRequestStatus(requestId: string, status: 'approved' | 'denied'): Promise<void> {
+  const supabase = requireSupabase();
+  const { error } = await supabase
+    .from('company_claim_requests')
+    .update({ review_status: status })
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
+export async function setUpdateRequestStatus(requestId: string, status: 'approved' | 'rejected'): Promise<void> {
+  const supabase = requireSupabase();
+  const { error } = await supabase
+    .from('company_update_requests')
+    .update({ review_status: status })
+    .eq('id', requestId);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateOwnedCompany(companyId: string, profile: CompanyProfileInput): Promise<Company> {
   const supabase = requireSupabase();
   const { data, error } = await supabase

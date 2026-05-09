@@ -8,15 +8,31 @@ type AuthContextValue = {
   loading: boolean;
   session: AuthSession | null;
   user: AuthUser | null;
+  isStaff: boolean;
   signInWithMagicLink: (email: string) => Promise<string | null>;
   signOut: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function checkIsStaff(email: string | null | undefined): Promise<boolean> {
+  if (!email || !supabase) return false;
+  const { data, error } = await supabase
+    .from('staff_users')
+    .select('email')
+    .ilike('email', email)
+    .maybeSingle();
+  if (error) {
+    console.error('Failed to load staff status', error);
+    return false;
+  }
+  return !!data;
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(isSupabaseEnabled);
+  const [isStaff, setIsStaff] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -57,12 +73,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const email = session?.user?.email ?? null;
+    if (!email) {
+      setIsStaff(false);
+      return;
+    }
+    checkIsStaff(email).then((result) => {
+      if (!cancelled) setIsStaff(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.email]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       enabled: isSupabaseEnabled,
       loading,
       session,
       user: session?.user ?? null,
+      isStaff,
       async signInWithMagicLink(email: string) {
         if (!supabase) {
           return 'Supabase is not configured.';
@@ -81,7 +113,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return error?.message ?? null;
       },
     }),
-    [loading, session]
+    [loading, session, isStaff]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

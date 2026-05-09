@@ -97,7 +97,17 @@ function hiringSelectValue(value: boolean | null): string {
   return 'unknown';
 }
 
+function parsePhotoUrls(data: FormData): string[] {
+  const raw = data.get('photo_urls');
+  if (typeof raw !== 'string') return [];
+  return raw
+    .split(/\r?\n|,/g)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 function buildProfileInput(data: FormData, fallbackContactEmail: string | null = null): CompanyProfileInput {
+  const photoUrls = parsePhotoUrls(data);
   return {
     name: requiredString(data, 'company_name'),
     website: optionalString(data, 'website'),
@@ -111,7 +121,8 @@ function buildProfileInput(data: FormData, fallbackContactEmail: string | null =
     foundedYear: parseFoundedYear(data.get('year_founded')),
     hiring: parseHiring(data.get('hiring_status')),
     jobsUrl: optionalString(data, 'job_postings'),
-    photoUrl: optionalString(data, 'photo_url'),
+    photoUrl: photoUrls[0] ?? null,
+    photoUrls,
     contactEmail: optionalString(data, 'contact_email') ?? fallbackContactEmail,
   };
 }
@@ -544,10 +555,13 @@ function AddCompanyForm({
           <Field label="City (optional)" name="city" placeholder="Salt Lake City" />
         </div>
         <TextAreaField label="Description" name="description" placeholder="What does the company do, and who does it serve?" required rows={4} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="LinkedIn URL" name="linkedin" type="url" />
-          <Field label="Photo URL" name="photo_url" type="url" />
-        </div>
+        <Field label="LinkedIn URL" name="linkedin" type="url" />
+        <TextAreaField
+          label="Photo URLs (one per line)"
+          name="photo_urls"
+          rows={3}
+          placeholder={'https://example.com/photo-1.jpg\nhttps://example.com/photo-2.jpg'}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label="Hiring status"
@@ -714,10 +728,14 @@ function OwnedCompanyEditor({
           <Field label="City (optional)" name="city" defaultValue={company.city} />
         </div>
         <TextAreaField label="Description" name="description" rows={5} defaultValue={company.description} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="LinkedIn URL" name="linkedin" type="url" defaultValue={company.linkedin} />
-          <Field label="Photo URL" name="photo_url" type="url" defaultValue={company.photoUrl} />
-        </div>
+        <Field label="LinkedIn URL" name="linkedin" type="url" defaultValue={company.linkedin} />
+        <TextAreaField
+          label="Photo URLs (one per line)"
+          name="photo_urls"
+          rows={3}
+          placeholder={'https://example.com/photo-1.jpg\nhttps://example.com/photo-2.jpg'}
+          defaultValue={company.photoUrls.join('\n')}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label="Hiring status"

@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import AddCompany from './pages/AddCompany';
+import Admin from './pages/Admin';
 import CompanyProfile from './pages/CompanyProfile';
 import Home from './pages/Home';
 import Navigator from './pages/Navigator';
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/map" element={<StartupMap />} />
         <Route path="/companies/:id" element={<CompanyProfile />} />
         <Route path="/add-company" element={<AddCompany />} />
+        <Route path="/admin" element={<Admin />} />
       </Route>
     </Routes>
   );

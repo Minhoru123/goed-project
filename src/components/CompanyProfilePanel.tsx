@@ -61,6 +61,10 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
         </div>
       )}
 
+      {company.photoUrls.length > 0 && (
+        <PhotoGallery photos={company.photoUrls} alt={company.name} />
+      )}
+
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoCard label="City" value={city ?? 'Unknown'} />
         <InfoCard label="Sector" value={company.sector ?? 'Not listed'} />
@@ -103,6 +107,45 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
         </section>
       </div>
     </div>
+  );
+}
+
+function PhotoGallery({ photos, alt }: { photos: readonly string[]; alt: string }) {
+  const [cover, ...rest] = photos;
+  return (
+    <section className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/85">Photos</p>
+      <div className="overflow-hidden rounded-2xl border border-utah-stone/10 bg-utah-dark/35">
+        <a href={cover} target="_blank" rel="noreferrer" className="block">
+          <img
+            src={cover}
+            alt={`${alt} cover photo`}
+            className="aspect-[16/9] w-full object-cover transition hover:opacity-95"
+            loading="lazy"
+            onError={(event) => {
+              (event.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </a>
+        {rest.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto p-2">
+            {rest.map((url) => (
+              <a key={url} href={url} target="_blank" rel="noreferrer" className="shrink-0">
+                <img
+                  src={url}
+                  alt={`${alt} photo`}
+                  className="h-20 w-28 rounded-lg border border-utah-stone/10 object-cover transition hover:border-utah-gold/40"
+                  loading="lazy"
+                  onError={(event) => {
+                    (event.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

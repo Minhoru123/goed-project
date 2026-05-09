@@ -43,7 +43,7 @@ function isNullableBoolean(value: unknown): value is boolean | null {
   return value === null || typeof value === 'boolean';
 }
 
-function isCompany(value: unknown): value is Company {
+function isCompany(value: unknown): value is Omit<Company, 'photoUrls'> & { photoUrls?: unknown } {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   return (
@@ -66,6 +66,13 @@ function isCompany(value: unknown): value is Company {
   );
 }
 
+function normalizeCompany(raw: Omit<Company, 'photoUrls'> & { photoUrls?: unknown }): Company {
+  const galleryFromField = isStringArray(raw.photoUrls) ? raw.photoUrls : [];
+  const fallback = raw.photoUrl ? [raw.photoUrl] : [];
+  const merged = galleryFromField.length > 0 ? galleryFromField : fallback;
+  return { ...raw, photoUrls: merged };
+}
+
 async function loadStaticResources(): Promise<Resource[]> {
   const response = await fetch('/data/resources.json');
   if (!response.ok) throw new Error('Failed to load resources.json');
@@ -83,7 +90,7 @@ async function loadStaticCompanies(): Promise<Company[]> {
   if (!Array.isArray(data) || !data.every(isCompany)) {
     throw new Error('companies.json has an invalid shape');
   }
-  return data;
+  return data.map(normalizeCompany);
 }
 
 export async function loadResources(): Promise<Resource[]> {

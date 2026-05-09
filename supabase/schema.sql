@@ -1,5 +1,20 @@
 create extension if not exists pgcrypto;
 
+-- Migration helper for existing deployments: add photo_urls if missing.
+alter table if exists public.companies
+  add column if not exists photo_urls text[] not null default '{}';
+
+-- Staff allowlist (gates the /admin approval queue).
+create table if not exists public.staff_users (
+  email text primary key,
+  added_at timestamptz not null default now()
+);
+alter table public.staff_users enable row level security;
+create policy if not exists "staff_users_select_self"
+  on public.staff_users
+  for select
+  using (lower(coalesce(auth.jwt() ->> 'email', '')) = lower(email));
+
 create table if not exists public.companies (
   id text primary key,
   name text not null,
@@ -17,6 +32,7 @@ create table if not exists public.companies (
   hiring boolean,
   jobs_url text,
   photo_url text,
+  photo_urls text[] not null default '{}',
   contact_email text,
   created_by_user_id uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -185,3 +201,37 @@ create policy "company_submissions_insert_own"
 on public.company_submissions
 for insert
 with check (auth.uid() = submitted_by_user_id);
+
+-- Staff can read and update review-status on every queued request.
+create policy if not exists "claim_requests_staff_select"
+  on public.company_claim_requests
+  for select
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "claim_requests_staff_update"
+  on public.company_claim_requests
+  for update
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
+  with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "update_requests_staff_select"
+  on public.company_update_requests
+  for select
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "update_requests_staff_update"
+  on public.company_update_requests
+  for update
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
+  with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "submissions_staff_select"
+  on public.company_submissions
+  for select
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "submissions_staff_update"
+  on public.company_submissions
+  for update
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
+  with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));

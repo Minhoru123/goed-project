@@ -25,6 +25,7 @@ export interface CompanyProfileInput {
   hiring: boolean | null;
   jobsUrl: string | null;
   photoUrl: string | null;
+  photoUrls: string[];
   contactEmail: string | null;
 }
 
@@ -45,6 +46,7 @@ type CompanyRow = {
   hiring: boolean | null;
   jobs_url: string | null;
   photo_url: string | null;
+  photo_urls?: string[] | null;
   contact_email?: string | null;
 };
 
@@ -75,6 +77,11 @@ function mapCompany(row: CompanyRow): Company {
     hiring: row.hiring,
     jobsUrl: row.jobs_url,
     photoUrl: row.photo_url,
+    photoUrls: Array.isArray(row.photo_urls) && row.photo_urls.length > 0
+      ? row.photo_urls
+      : row.photo_url
+        ? [row.photo_url]
+        : [],
   };
 }
 
@@ -92,7 +99,8 @@ function buildCompanyPayload(profile: CompanyProfileInput, userId?: string) {
     founded_year: profile.foundedYear,
     hiring: profile.hiring,
     jobs_url: normalizeUrl(profile.jobsUrl),
-    photo_url: normalizeUrl(profile.photoUrl),
+    photo_url: normalizeUrl(profile.photoUrl ?? profile.photoUrls[0] ?? null),
+    photo_urls: profile.photoUrls.map((url) => normalizeUrl(url)).filter((url): url is string => !!url),
     contact_email: profile.contactEmail?.trim() || null,
     updated_at: new Date().toISOString(),
     ...(userId ? { created_by_user_id: userId } : {}),
@@ -117,7 +125,7 @@ export async function listLiveCompanies(): Promise<Company[]> {
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url')
+    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
     .order('name');
 
   if (error) {
@@ -160,7 +168,7 @@ export async function createCompanyWithOwner(userId: string, profile: CompanyPro
         id: companyId,
         ...buildCompanyPayload(profile, userId),
       })
-      .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url')
+      .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
       .single();
 
     if (error) {
@@ -200,7 +208,7 @@ export async function updateOwnedCompany(companyId: string, profile: CompanyProf
     .from('companies')
     .update(buildCompanyPayload(profile))
     .eq('id', companyId)
-    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url')
+    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
     .single();
 
   if (error) {

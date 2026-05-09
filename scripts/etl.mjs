@@ -180,7 +180,7 @@ async function geocode(address, cache) {
 function readSheet(path) {
   const wb = XLSX.readFile(path);
   const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { defval: null });
+  return XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
 }
 
 async function readSheetFromUrl(url) {
@@ -189,7 +189,7 @@ async function readSheetFromUrl(url) {
   const csv = await res.text();
   const wb = XLSX.read(csv, { type: 'string' });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { defval: null });
+  return XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
 }
 
 async function loadRows({ url, file, label }) {

@@ -9,13 +9,24 @@ Hackathon platform for the Utah Governor's Office of Economic Development. Two p
 
 ```bash
 npm install
-cp .env.example .env   # then edit .env and put your real ANTHROPIC_API_KEY
+cp .env.example .env   # then edit .env and add your real keys
 npm run dev            # http://localhost:5173 — Vite + /api/claude in one process
 ```
 
 A small Vite plugin in `vite.config.ts` runs the Netlify function code in-process during dev, so no Netlify CLI is required. The same function file (`netlify/functions/claude.ts`) runs on Netlify in production.
 
-For Netlify deploys, set `ANTHROPIC_API_KEY` in **Site settings → Environment variables**.
+For Netlify deploys, set `ANTHROPIC_API_KEY`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY` in **Site settings → Environment variables**.
+
+## Supabase
+
+The lightweight company-auth flow uses Supabase for:
+
+- magic-link sign-in
+- company claim requests
+- company update requests
+- new listing submissions
+
+Apply the SQL in [supabase/schema.sql](./supabase/schema.sql) to your Supabase project before testing the add/claim/update flows.
 
 ## Data
 

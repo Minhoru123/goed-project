@@ -5,22 +5,22 @@ export default {
     extend: {
       colors: {
         utah: {
-          // New investor-grade palette (preferred names)
+          // Core dark palette
           navy: '#002244',
           gold: '#D4AF37',
           dark: '#0F172A',     // page background
           slate: '#1E293B',    // card / sidebar background
           hiring: '#10B981',
 
-          // Legacy keys remapped to the dark theme so existing class names
+          // Legacy keys remapped for the dark theme so existing class names
           // (utah-cream, utah-stone, utah-sand, utah-red, utah-sky) keep
           // working without a global rename.
-          cream: '#0F172A',    // was light bg → now dark bg
+          cream: '#0F172A',    // page bg
           slate2: '#1E293B',
-          stone: '#E2E8F0',    // was dark text → now light text on dark
-          sand: '#1E293B',     // was warm muted bg → now slate muted bg
-          red: '#D4AF37',      // was red accent → now gold accent
-          sky: '#60A5FA',      // was deep blue → now lighter sky-blue (readable links on dark)
+          stone: '#E2E8F0',    // light body text on dark
+          sand: '#1E293B',     // muted card bg
+          red: '#D4AF37',      // gold accent (legacy alias)
+          sky: '#60A5FA',      // sky-blue links on dark
         },
       },
       fontFamily: {

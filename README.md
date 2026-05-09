@@ -10,7 +10,7 @@ Hackathon platform for the Utah Governor's Office of Economic Development. Two p
 ```bash
 npm install
 cp .env.example .env   # then edit .env and add your real keys
-npm run dev            # http://localhost:5173 — Vite + local /api handlers in one process
+![1778353032354](image/README/1778353032354.png)![1778353037932](image/README/1778353037932.png)![1778353040244](image/README/1778353040244.png)![1778353045770](image/README/1778353045770.png)![1778353071357](image/README/1778353071357.png)![1778353072983](image/README/1778353072983.png)npm run dev            # http://localhost:5173 — Vite + local /api handlers in one process
 ```
 
 A small Vite plugin in `vite.config.ts` runs the local `api/*.ts` handlers in-process during dev, so the frontend and server-side AI endpoints stay on the same origin.

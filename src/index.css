@@ -10,25 +10,21 @@
   }
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top, rgba(212, 175, 55, 0.06), transparent 24%),
-      linear-gradient(180deg, #08111f 0%, #0f172a 24%, #0f172a 100%);
+    background: theme('colors.utah.cream');
+    color: theme('colors.utah.stone');
   }
   h1, h2, h3 {
     font-family: 'Space Grotesk', Inter, sans-serif;
     letter-spacing: -0.01em;
+    color: theme('colors.utah.stone');
+    font-weight: 700;
   }
 }
 
 @media print {
-  /* Print only the Briefing — hide everything else for a clean PDF. */
-  body * {
-    visibility: hidden;
-  }
+  body * { visibility: hidden; }
   .briefing,
-  .briefing * {
-    visibility: visible;
-  }
+  .briefing * { visibility: visible; }
   .briefing {
     position: absolute;
     inset: 0;
@@ -39,19 +35,27 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl border border-utah-gold bg-utah-gold px-5 py-3 font-semibold text-utah-dark shadow-sm shadow-black/20 transition hover:-translate-y-px hover:bg-utah-gold/90 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-lg border border-utah-gold bg-utah-gold px-5 py-2.5 font-semibold text-utah-dark transition hover:bg-utah-gold/90 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl border border-utah-stone/20 bg-utah-slate px-5 py-3 font-semibold text-utah-stone transition hover:border-utah-gold/30 hover:bg-utah-dark/60 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-lg border border-utah-stone/20 bg-utah-slate px-5 py-2.5 font-semibold text-utah-stone transition hover:border-utah-gold/40 hover:bg-utah-dark/60 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-dark {
+    @apply inline-flex items-center justify-center rounded-lg border border-utah-stone/20 bg-utah-dark px-5 py-2.5 font-semibold text-utah-stone transition hover:border-utah-gold/40 hover:bg-utah-slate disabled:cursor-not-allowed disabled:opacity-50;
   }
   .card {
-    @apply rounded-3xl border border-utah-stone/10 bg-utah-slate p-6 shadow-xl shadow-black/25;
+    @apply rounded-2xl border border-utah-stone/10 bg-utah-slate p-6 shadow-lg shadow-black/20;
   }
-  /* Form controls: ensure inputs/selects use dark surface + light text. */
+  /* Form controls: dark surface, light text. */
   input,
   select,
   textarea {
-    @apply bg-utah-slate text-utah-stone;
+    @apply bg-utah-slate text-utah-stone border-utah-stone/20;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply outline-none border-utah-gold;
   }
   select option {
     background: #1E293B;
@@ -59,7 +63,7 @@
   }
 }
 
-/* Leaflet popups: light card on top of map tiles needs different treatment. */
+/* Leaflet popups: dark card on map. */
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   background: #1E293B;

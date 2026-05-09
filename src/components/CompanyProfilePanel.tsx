@@ -166,7 +166,7 @@ function LinkRow({ label, href, text }: { label: string; href: string; text: str
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center justify-between rounded-xl border border-utah-stone/10 bg-white px-3 py-2 text-sm text-utah-stone transition hover:border-utah-gold/40 hover:text-utah-gold"
+      className="flex items-center justify-between rounded-xl border border-utah-stone/10 bg-utah-dark/35 px-3 py-2 text-sm text-utah-stone transition hover:border-utah-gold/40 hover:bg-utah-dark/55 hover:text-utah-gold"
     >
       <span className="font-semibold">{label}</span>
       <span className="truncate pl-3 text-utah-stone/80">{text}</span>

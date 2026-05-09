@@ -4,18 +4,22 @@
 const BASE = process.env.BASE_URL || 'http://localhost:5173';
 
 const PERSONAS = [
-  { id: '01', name: 'Jordan, 20 — SLC', step: 1,
+  { id: '01', name: 'Jordan, 20 — SLC', persona: 'founder', step: 1,
     input: "Pre-seed founder with an idea but no business yet. Looking for resources to take my first steps. I'm in Salt Lake City." },
-  { id: '02', name: 'Maria, 38 — Washington County', step: 14,
+  { id: '02', name: 'Maria, 38 — Washington County', persona: 'founder', step: 14,
     input: "Running a small agricultural operation near St. George. Rural, woman-owned, looking to scale." },
-  { id: '03', name: 'Marcus, 34 — Ogden', step: 9,
+  { id: '03', name: 'Marcus, 34 — Ogden', persona: 'founder', step: 9,
     input: "Just left the military and starting a custom fabrication and manufacturing business. Veteran, early-stage, in Weber County." },
-  { id: '04', name: 'Priya, 31 — SLC', step: 13,
+  { id: '04', name: 'Priya, 31 — SLC', persona: 'founder', step: 13,
     input: "B2B SaaS founder, 18 months in, paying customers, ready to raise my first venture round. Looking for angel groups and VCs." },
-  { id: '05', name: 'David, 45 — Provo', step: 17,
+  { id: '05', name: 'David, 45 — Provo', persona: 'founder', step: 17,
     input: "Medical device company, 12 employees, FDA cleared. Looking to expand to international markets. Growth stage." },
-  { id: '06', name: 'Dr. Amir, 29 — SLC', step: 3,
+  { id: '06', name: 'Dr. Amir, 29 — SLC', persona: 'founder', step: 3,
     input: "PhD candidate at the University of Utah developing novel technology. Want to commercialize my research and found a company. Never started a business before." },
+  { id: '07', name: 'Sasha — investor, SLC', persona: 'investor', step: null,
+    input: "Seed-stage hardware investor based in Salt Lake. Want exposure to Utah university spinouts, demo days, and any defense/dual-use programs in the state." },
+  { id: '08', name: 'Lin — provider, Lehi', persona: 'provider', step: null,
+    input: "I run a boutique IP and corporate law firm in Lehi serving deep-tech and life-sciences founders. Want to plug into Utah accelerators, university tech transfer offices, and founder communities to reach early-stage clients." },
 ];
 
 function pickHeadings(text) {
@@ -37,7 +41,7 @@ async function runPersona(p) {
   const res = await fetch(`${BASE}/api/claude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userInput: p.input, journeyStep: p.step }),
+    body: JSON.stringify({ userInput: p.input, journeyStep: p.step ?? undefined, persona: p.persona }),
   });
 
   if (!res.ok) {
@@ -71,7 +75,7 @@ async function runPersona(p) {
 (async () => {
   console.log(`Running ${PERSONAS.length} personas against ${BASE}/api/claude\n`);
   for (const p of PERSONAS) {
-    process.stdout.write(`${p.id} ${p.name.padEnd(40)} step ${String(p.step).padStart(2)} ... `);
+    process.stdout.write(`${p.id} ${p.name.padEnd(40)} ${p.persona.padEnd(9)} step ${String(p.step ?? '-').padStart(2)} ... `);
     try {
       const r = await runPersona(p);
       if (!r.ok) {

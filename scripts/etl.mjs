@@ -8,8 +8,9 @@
 //
 // "Updatable without dev" path: set RESOURCES_URL and/or COMPANIES_URL env
 // vars to a published Google Sheet CSV URL. ETL fetches the CSV instead of
-// reading the local .xlsx. On Netlify, a Sheets-triggered build hook makes
-// updates land live in ~30s with no code changes.
+// reading the local .xlsx. The resource feed can now also be read live at
+// runtime by the app's server handlers; companies.json is mainly a seed/fallback
+// source once Supabase is live.
 
 import { readFile, writeFile, mkdir, access } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -97,6 +98,76 @@ const cleanString = (v) => {
   const s = String(v).trim();
   return s.length ? s : null;
 };
+
+const normalizeText = (v) =>
+  String(v || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+
+const normalizeAddress = (v) => normalizeText(v).replace(/[^a-z0-9]/g, '');
+
+const getDomainFromUrl = (v) => {
+  const s = cleanString(v);
+  if (!s) return '';
+  const withProtocol = /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  try {
+    return new URL(withProtocol).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+const ensureUniqueId = (baseId, usedIds) => {
+  const normalizedBase = cleanString(baseId) || 'company';
+  if (!usedIds.has(normalizedBase)) return normalizedBase;
+  let suffix = 2;
+  let candidate = `${normalizedBase}-${suffix}`;
+  while (usedIds.has(candidate)) {
+    suffix += 1;
+    candidate = `${normalizedBase}-${suffix}`;
+  }
+  return candidate;
+};
+
+const buildCompanyDuplicateKeys = (company) => {
+  const keys = [];
+  const name = normalizeText(company.name);
+  const address = normalizeAddress(company.address);
+  const domain = getDomainFromUrl(company.website);
+  if (name && address) keys.push(`${name}|address|${address}`);
+  if (name && domain) keys.push(`${name}|domain|${domain}`);
+  return keys;
+};
+
+const pickBetterString = (current, incoming) => {
+  const currentText = cleanString(current) || '';
+  const incomingText = cleanString(incoming) || '';
+  if (!currentText) return incoming ?? null;
+  if (!incomingText) return current;
+  return incomingText.length > currentText.length ? incoming : current;
+};
+
+const pickBetterNumber = (current, incoming) => current ?? incoming ?? null;
+
+const mergeCompanyRows = (current, incoming) => ({
+  ...current,
+  name: pickBetterString(current.name, incoming.name),
+  linkedin: pickBetterString(current.linkedin, incoming.linkedin),
+  address: pickBetterString(current.address, incoming.address) || '',
+  city: pickBetterString(current.city, incoming.city),
+  lat: pickBetterNumber(current.lat, incoming.lat),
+  lng: pickBetterNumber(current.lng, incoming.lng),
+  description: pickBetterString(current.description, incoming.description),
+  website: pickBetterString(current.website, incoming.website),
+  stage: pickBetterString(current.stage, incoming.stage),
+  employees: pickBetterString(current.employees, incoming.employees),
+  sector: pickBetterString(current.sector, incoming.sector),
+  foundedYear: pickBetterNumber(current.foundedYear, incoming.foundedYear),
+  hiring: current.hiring ?? incoming.hiring,
+  jobsUrl: pickBetterString(current.jobsUrl, incoming.jobsUrl),
+  photoUrl: pickBetterString(current.photoUrl, incoming.photoUrl),
+});
 
 // "Stage" column in the company sheet has dates mixed in. Treat any value
 // that isn't a recognizable stage word as null.
@@ -228,6 +299,8 @@ function buildResources(rows) {
 async function buildCompanies(rows) {
   const cache = await loadCache();
   const out = [];
+  const duplicateIndexByKey = new Map();
+  const usedIds = new Set();
   let i = 0;
   for (const r of rows) {
     i += 1;
@@ -236,7 +309,7 @@ async function buildCompanies(rows) {
     const address = cleanString(r['Full Address']);
     const { lat, lng } = address ? await geocode(address, cache) : { lat: null, lng: null };
     if (i % 10 === 0) console.log(`  geocoded ${i}/${rows.length}`);
-    out.push({
+    const candidate = {
       id: slug(name) || `co-${i}`,
       name,
       linkedin: cleanString(r['LinkedIn Link (map it to Links to get the logo)']),
@@ -253,7 +326,23 @@ async function buildCompanies(rows) {
       hiring: null,
       jobsUrl: null,
       photoUrl: null,
-    });
+    };
+
+    const duplicateKeys = buildCompanyDuplicateKeys(candidate);
+    const existingIndex = duplicateKeys
+      .map((key) => duplicateIndexByKey.get(key))
+      .find((index) => Number.isInteger(index));
+
+    if (existingIndex !== undefined) {
+      out[existingIndex] = mergeCompanyRows(out[existingIndex], candidate);
+      for (const key of duplicateKeys) duplicateIndexByKey.set(key, existingIndex);
+      continue;
+    }
+
+    candidate.id = ensureUniqueId(candidate.id, usedIds);
+    usedIds.add(candidate.id);
+    const nextIndex = out.push(candidate) - 1;
+    for (const key of duplicateKeys) duplicateIndexByKey.set(key, nextIndex);
   }
   return out;
 }

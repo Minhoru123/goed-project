@@ -8,3 +8,5 @@ dist
 .vite
 .claude/
 data/
+netlify/
+netlify.toml

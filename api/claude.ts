@@ -6,6 +6,8 @@ const MAX_INPUT_CHARS = 1200;
 const MAX_BODY_BYTES = 8_000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const MAX_CLAUDE_ATTEMPTS = 2;
+const CLAUDE_RETRY_DELAY_MS = 800;
 
 const rateWindowByIp = new Map<string, number[]>();
 
@@ -70,6 +72,26 @@ function isRateLimited(ip: string, now: number): boolean {
   recent.push(now);
   rateWindowByIp.set(ip, recent);
   return false;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableClaudeError(error: unknown): boolean {
+  const status =
+    typeof error === 'object' && error !== null && 'status' in error
+      ? Number((error as { status?: unknown }).status)
+      : undefined;
+  if (status === 429 || (status != null && status >= 500 && status < 600)) return true;
+
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    message.includes('overload') ||
+    message.includes('rate limit') ||
+    message.includes('timeout') ||
+    message.includes('network')
+  );
 }
 
 function cleanText(value: unknown, maxLength: number): string {
@@ -274,23 +296,37 @@ export default async function claude(req: Request): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
-      try {
-        const response = await client.messages.stream({
-          model: MODEL,
-          max_tokens: 1500,
-          messages: [{ role: 'user', content: prompt }],
-        });
+      for (let attempt = 1; attempt <= MAX_CLAUDE_ATTEMPTS; attempt += 1) {
+        let wroteText = false;
+        try {
+          const response = await client.messages.stream({
+            model: MODEL,
+            max_tokens: 1500,
+            messages: [{ role: 'user', content: prompt }],
+          });
 
-        for await (const event of response) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(event.delta.text));
+          for await (const event of response) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              wroteText = true;
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
           }
+          controller.close();
+          return;
+        } catch (error) {
+          console.error(`[${requestId}] Claude request failed on attempt ${attempt}.`, error);
+          if (!wroteText && attempt < MAX_CLAUDE_ATTEMPTS && isRetryableClaudeError(error)) {
+            await delay(CLAUDE_RETRY_DELAY_MS * attempt);
+            continue;
+          }
+
+          const message = wroteText
+            ? '\n\n[The match service was interrupted. Please try again.]'
+            : '\n\n[The match service hit an error. Please try again.]';
+          controller.enqueue(encoder.encode(message));
+          controller.close();
+          return;
         }
-        controller.close();
-      } catch (error) {
-        console.error(`[${requestId}] Claude request failed.`, error);
-        controller.enqueue(encoder.encode('\n\n[The match service hit an error. Please try again.]'));
-        controller.close();
       }
     },
   });

@@ -174,7 +174,7 @@ export default function Navigator() {
 
       {!hasResult && mode === 'quiz' && persona === 'founder' && (
         <div className="card">
-          <FounderQuiz onSubmit={submitProfile} disabled={streaming || resources.length === 0} />
+          <FounderQuiz onSubmit={submitProfile} disabled={streaming} />
           <div className="mt-6 border-t border-utah-stone/10 pt-4 text-center">
             <button
               type="button"

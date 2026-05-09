@@ -1,7 +1,9 @@
-// Smoke-test the Navigator against the 6 hackathon judge personas.
+// Smoke-test the Navigator against the hackathon judge personas and persona modes.
 // Run with: node scripts/test-personas.mjs (requires `npm run dev` in another terminal).
 
 const BASE = process.env.BASE_URL || 'http://localhost:5173';
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 2500;
 
 const PERSONAS = [
   { id: '01', name: 'Jordan, 20 — SLC', persona: 'founder', step: 1,
@@ -36,7 +38,15 @@ function parseJson(text) {
   }
 }
 
-async function runPersona(p) {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function hasValidShape(result) {
+  return result.ok && result.matchCount >= 3 && result.briefingOk && !result.serviceError;
+}
+
+async function runPersonaOnce(p) {
   const start = Date.now();
   const res = await fetch(`${BASE}/api/claude`, {
     method: 'POST',
@@ -67,29 +77,56 @@ async function runPersona(p) {
     headings,
     matchCount: headings.length,
     briefingOk: !!briefing,
+    serviceError: /\[The match service (hit an error|was interrupted)\. Please try again\.\]/i.test(full),
+    snippet: full.replace(/\s+/g, ' ').trim().slice(0, 240),
     journeyStep: briefing?.journey_step ?? null,
     topPicks: briefing?.top_picks?.map((p) => ({ name: p.name, steps: p.journey_steps })) ?? [],
   };
 }
 
+async function runPersona(p) {
+  let last;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    last = await runPersonaOnce(p);
+    last.attempt = attempt;
+    if (hasValidShape(last) || attempt === MAX_ATTEMPTS) return last;
+    await sleep(RETRY_DELAY_MS * attempt);
+  }
+  return last;
+}
+
 (async () => {
   console.log(`Running ${PERSONAS.length} personas against ${BASE}/api/claude\n`);
+  let failures = 0;
   for (const p of PERSONAS) {
     process.stdout.write(`${p.id} ${p.name.padEnd(40)} ${p.persona.padEnd(9)} step ${String(p.step ?? '-').padStart(2)} ... `);
     try {
       const r = await runPersona(p);
       if (!r.ok) {
         console.log(`FAIL ${r.status} ${r.body}`);
+        failures += 1;
       } else {
-        console.log(`${r.matchCount} matches in ${r.ms}ms · briefing ${r.briefingOk ? 'OK' : 'MISSING'}`);
+        const attempts = r.attempt > 1 ? ` after ${r.attempt} attempts` : '';
+        console.log(`${r.matchCount} matches in ${r.ms}ms${attempts} · briefing ${r.briefingOk ? 'OK' : 'MISSING'}`);
         for (const pick of r.topPicks) {
           console.log(`     - ${pick.name}  ${(pick.steps || []).map((s) => `[${s}]`).join('')}`);
+        }
+        if (!hasValidShape(r)) {
+          console.log(`     FAIL response shape: ${r.snippet || '(empty response)'}`);
+          failures += 1;
         }
       }
     } catch (e) {
       console.log(`ERROR ${e.message}`);
+      failures += 1;
     }
-    // Stay under the 10/5min rate limit (5 requests already; small delay).
-    await new Promise((r) => setTimeout(r, 1500));
+    // Keep a little space between streamed model calls.
+    await sleep(1500);
+  }
+  if (failures > 0) {
+    console.error(`\n${failures} persona smoke test(s) failed.`);
+    process.exitCode = 1;
+  } else {
+    console.log('\nAll persona smoke tests returned matches and briefing JSON.');
   }
 })();

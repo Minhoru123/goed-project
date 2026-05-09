@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { Resource } from '../types';
 import { loadResources } from '../lib/loadData';
-import { streamMatch } from '../lib/claude';
+import { streamMatch, type Persona } from '../lib/claude';
 import Briefing, { parseBriefing, stripBriefingBlock } from '../components/Briefing';
 import JourneyPicker from '../components/JourneyPicker';
 import FounderQuiz, { type FounderProfile } from '../components/FounderQuiz';
@@ -68,6 +68,7 @@ export default function Navigator() {
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'quiz' | 'freeform'>('quiz');
+  const [persona, setPersona] = useState<Persona>('founder');
   const abortRef = useRef<AbortController | null>(null);
 
   function submitProfile(profile: FounderProfile, derivedStep: number) {
@@ -118,7 +119,7 @@ export default function Navigator() {
           setStreaming(false);
         },
       },
-      { journeyStep: stepToUse, signal: abortRef.current.signal }
+      { journeyStep: stepToUse, persona, signal: abortRef.current.signal }
     );
   }
 
@@ -145,7 +146,33 @@ export default function Navigator() {
         </p>
       </div>
 
-      {!hasResult && mode === 'quiz' && (
+      {!hasResult && (
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-utah-stone/80">I'm a…</p>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { id: 'founder', label: 'Founder' },
+              { id: 'investor', label: 'Investor' },
+              { id: 'provider', label: 'Service provider' },
+            ] as { id: Persona; label: string }[]).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setPersona(opt.id)}
+                className={`rounded-full border px-3 py-1.5 text-xs ${
+                  persona === opt.id
+                    ? 'border-utah-gold bg-utah-gold/15 text-utah-gold'
+                    : 'border-utah-stone/20 bg-utah-slate text-utah-stone hover:border-utah-gold/60 hover:bg-utah-gold/10'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!hasResult && mode === 'quiz' && persona === 'founder' && (
         <div className="card">
           <FounderQuiz onSubmit={submitProfile} disabled={streaming || resources.length === 0} />
           <div className="mt-6 border-t border-utah-stone/10 pt-4 text-center">
@@ -160,27 +187,39 @@ export default function Navigator() {
         </div>
       )}
 
-      {!hasResult && mode === 'freeform' && (
+      {!hasResult && (mode === 'freeform' || persona !== 'founder') && (
         <div className="card">
-          <div className="mb-4">
-            <button
-              type="button"
-              className="text-xs text-utah-stone/80 hover:text-utah-gold"
-              onClick={() => setMode('quiz')}
-            >
-              ← Back to the guided quiz
-            </button>
-          </div>
+          {persona === 'founder' && (
+            <div className="mb-4">
+              <button
+                type="button"
+                className="text-xs text-utah-stone/80 hover:text-utah-gold"
+                onClick={() => setMode('quiz')}
+              >
+                ← Back to the guided quiz
+              </button>
+            </div>
+          )}
 
-          <JourneyPicker value={journeyStep} onChange={setJourneyStep} />
+          {persona === 'founder' && <JourneyPicker value={journeyStep} onChange={setJourneyStep} />}
 
           <label htmlFor="founder-input" className="mb-2 mt-4 block text-sm font-semibold">
-            What are you building, and what do you need?
+            {persona === 'founder'
+              ? 'What are you building, and what do you need?'
+              : persona === 'investor'
+                ? 'What do you invest in, and what kind of Utah deal flow or partnerships are you looking for?'
+                : 'What services do you offer, and which Utah founders do you want to reach?'}
           </label>
           <textarea
             id="founder-input"
             className="min-h-[120px] w-full rounded-md border border-utah-stone/20 px-4 py-3 outline-none focus:border-utah-sky"
-            placeholder="e.g., I'm a veteran in St. George starting a landscaping business and need help with my first $50k of funding."
+            placeholder={
+              persona === 'founder'
+                ? "e.g., I'm a veteran in St. George starting a landscaping business and need help with my first $50k of funding."
+                : persona === 'investor'
+                  ? "e.g., Seed-stage hardware investor based in SLC, want exposure to Utah university spinouts and demo days."
+                  : "e.g., Boutique IP firm in Lehi serving deep-tech founders, want to plug into accelerators and university programs."
+            }
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -189,7 +228,7 @@ export default function Navigator() {
             disabled={streaming}
           />
 
-          <div className="mt-3">
+          <div className={`mt-3 ${persona !== 'founder' ? 'hidden' : ''}`}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-utah-stone/80">
               Or try a sample founder
             </p>

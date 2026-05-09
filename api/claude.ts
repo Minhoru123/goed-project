@@ -9,10 +9,50 @@ const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 
 const rateWindowByIp = new Map<string, number[]>();
 
+type Persona = 'founder' | 'investor' | 'provider';
+
 interface Body {
   userInput: string;
   journeyStep?: number;
+  persona?: Persona;
 }
+
+const PERSONA_CONFIG: Record<Persona, { role: string; audience: string; voice: string; intent: string; partTitle: string; planTitle: string; jsonHint: string }> = {
+  founder: {
+    role: "a Utah-savvy advisor for the Governor's Office of Economic Development helping a founder",
+    audience: 'founder',
+    voice:
+      "Adapt your tone to the founder's situation. Plain, friendly English for trades / food / services / agriculture / retail / healthcare owners; direct startup-speak (TAM, GTM, runway, dilution) only when the founder is clearly a tech / SaaS / life-sciences operator. Never use jargon a non-technical owner wouldn't recognize. Avoid the word \"ecosystem\" with non-tech founders.",
+    intent: 'Match them to the 3-5 best Utah resources from the catalog that fit their stage and the most pressing need.',
+    partTitle: '## Top matches',
+    planTitle: '## What to do this week',
+    jsonHint:
+      '"founder_summary" describes the founder and their journey step in one sentence. "intro_email" is a 4-6 sentence note the founder can copy-paste to a program asking how to engage.',
+  },
+  investor: {
+    role: 'a Utah-savvy advisor helping an investor (angel, VC, or family office) plug into the Utah startup landscape',
+    audience: 'investor',
+    voice:
+      'Direct investor-speak. Assume familiarity with stages, terms, and the venture stack. Be concise and signal-dense.',
+    intent:
+      'They want Utah programs and orgs to plug into for deal flow, co-investment, sector access, demo days, or LP relationships. Match them to the 3-5 best fits from the catalog (accelerators, university tech transfer, regional dev orgs, sector trade groups, demo events). Never recommend a program that has no investor angle.',
+    partTitle: '## Top picks for deal flow',
+    planTitle: '## How to engage this week',
+    jsonHint:
+      '"founder_summary" is repurposed: one sentence describing the investor and the segment they want exposure to. "intro_email" is a 4-6 sentence note the investor can send a program asking for warm intros, demo day access, or sponsorship/partnership conversation.',
+  },
+  provider: {
+    role: 'a Utah-savvy advisor helping a service provider (lawyer, accountant, fractional exec, consultant, or agency) find Utah founders to serve',
+    audience: 'service provider',
+    voice: 'Plain, professional English. Skip VC jargon.',
+    intent:
+      'They want Utah programs and orgs where founders gather and where partnering, sponsoring, mentoring, or showing up adds value. Match them to the 3-5 best fits from the catalog. Never recommend a program where a service provider has no natural way in.',
+    partTitle: '## Top picks to engage',
+    planTitle: '## How to engage this week',
+    jsonHint:
+      '"founder_summary" is repurposed: one sentence describing the provider and which founders they serve best. "intro_email" is a 4-6 sentence note the provider can send a program offering to mentor / sponsor / present / partner.',
+  },
+};
 
 function getClientIp(req: Request): string {
   const forwardedFor = req.headers.get('x-forwarded-for');
@@ -58,7 +98,8 @@ const JOURNEY_STEP_TITLES: Record<number, string> = {
   19: 'Close Your Business',
 };
 
-function buildPrompt(userInput: string, resources: ResourceCatalogItem[], journeyStep?: number): string {
+function buildPrompt(userInput: string, resources: ResourceCatalogItem[], journeyStep: number | undefined, persona: Persona): string {
+  const cfg = PERSONA_CONFIG[persona];
   const catalog = resources
     .map(
       (resource) => `- [${resource.id}] ${resource.name}
@@ -73,13 +114,16 @@ function buildPrompt(userInput: string, resources: ResourceCatalogItem[], journe
     )
     .join('\n');
 
-  const stepLine = journeyStep
-    ? `The founder says they are at JOURNEY STEP ${journeyStep}: ${JOURNEY_STEP_TITLES[journeyStep] || ''}. Prioritize resources that serve that step (or the next 1-2 steps), and tag every recommendation with the step number(s) it supports.`
-    : 'Infer where the founder is in the 19-step Utah entrepreneur journey from their input, and tag every recommendation with the step number(s) it supports.';
+  const stepLine =
+    persona === 'founder'
+      ? journeyStep
+        ? `The founder says they are at JOURNEY STEP ${journeyStep}: ${JOURNEY_STEP_TITLES[journeyStep] || ''}. Prioritize resources that serve that step (or the next 1-2 steps), and tag every recommendation with the step number(s) it supports.`
+        : 'Infer where the founder is in the 19-step Utah entrepreneur journey from their input, and tag every recommendation with the step number(s) it supports.'
+      : `Tag every recommendation with the founder journey step(s) the program serves so the ${cfg.audience} knows which founders they will reach through it.`;
 
-  return `You are a Utah-savvy advisor for the Governor's Office of Economic Development.
+  return `You are ${cfg.role}.
 
-VOICE — Adapt your tone to the founder's situation. The user message tells you what kind of business they run. Plain, friendly English for trades / food / services / agriculture / retail owners; direct startup-speak (TAM, GTM, runway, dilution) only when the founder is clearly a tech / SaaS / life-sciences operator. Never use jargon a non-technical owner wouldn't recognize. Avoid the word "ecosystem" with non-tech founders.
+VOICE — ${cfg.voice}
 
 CONTEXT — Utah's startup.utah.gov organizes founder support around a 19-step entrepreneur journey:
 1. Find Your Big Idea (Thinking)
@@ -102,38 +146,38 @@ CONTEXT — Utah's startup.utah.gov organizes founder support around a 19-step e
 18. Relocate Your Business to Utah (Growing)
 19. Close Your Business (Exit)
 
-The user just said:
+The ${cfg.audience} just said:
 """
 ${userInput}
 """
 
 ${stepLine}
 
-Match them to the 3-5 best resources from this catalog. Only use resources from the list.
+${cfg.intent} Only use resources from the list.
 
 CATALOG:
 ${catalog}
 
 Respond in TWO parts.
 
-PART 1 — Concise markdown for the founder, in this exact structure:
+PART 1 — Concise markdown for the ${cfg.audience}, in this exact structure:
 
-## Top matches
+${cfg.partTitle}
 
 For each match (3-5, ranked):
 ### {Resource name}  ·  Step {N}{, M}
-- **Why this fits:** one or two sentences tying it to their stage and the journey step.
+- **Why this fits:** one or two sentences tying it to the ${cfg.audience}'s situation and the journey step the program serves.
 - **Next step:** one specific action.
 - **Link:** the URL.
 
-## What to do this week
+${cfg.planTitle}
 A short paragraph with a prioritized 2-3 step plan.
 
-PART 2 — Immediately after the markdown, output a single fenced JSON code block that machines can parse for a "Founder Briefing" handout. Use this exact shape:
+PART 2 — Immediately after the markdown, output a single fenced JSON code block. Use this exact shape (keys are fixed; ${cfg.jsonHint}):
 
 \`\`\`json
 {
-  "founder_summary": "One sentence describing the founder including which journey step they're at.",
+  "founder_summary": "One sentence per the field meaning above.",
   "journey_step": 9,
   "top_picks": [
     {
@@ -147,7 +191,7 @@ PART 2 — Immediately after the markdown, output a single fenced JSON code bloc
       "deadline": "deadline if mentioned in catalog summary, else null"
     }
   ],
-  "intro_email": "Subject: ...\\n\\nHi [Program Team],\\n\\nA full 4-6 sentence email the founder can copy-paste to introduce themselves and ask for a next step. Address it generically since we don't know the recipient's name."
+  "intro_email": "Subject: ...\\n\\nHi [Program Team],\\n\\nThe email body per the field meaning above. Address it generically since we don't know the recipient's name."
 }
 \`\`\`
 
@@ -215,6 +259,9 @@ export default async function claude(req: Request): Promise<Response> {
       ? Math.trunc(rawStep)
       : undefined;
 
+  const persona: Persona =
+    body?.persona === 'investor' || body?.persona === 'provider' ? body.persona : 'founder';
+
   const resources = await loadResourceCatalog();
   if (resources.length === 0) {
     console.error(`[${requestId}] Resource catalog is empty or invalid.`);
@@ -222,7 +269,7 @@ export default async function claude(req: Request): Promise<Response> {
   }
 
   const client = new Anthropic({ apiKey });
-  const prompt = buildPrompt(userInput, resources, journeyStep);
+  const prompt = buildPrompt(userInput, resources, journeyStep, persona);
 
   const stream = new ReadableStream({
     async start(controller) {

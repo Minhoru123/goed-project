@@ -1,7 +1,9 @@
 import { NavLink, Outlet, Link } from 'react-router-dom';
 import logoUrl from '../assets/logo.png';
+import { useAuth } from '../auth/AuthProvider';
 
 export default function Layout() {
+  const { isStaff } = useAuth();
   return (
     <div className="flex min-h-screen flex-col bg-utah-dark text-utah-stone">
       <header className="sticky top-0 z-40 border-b border-utah-stone/10 bg-utah-dark">
@@ -15,6 +17,7 @@ export default function Layout() {
             <NavItem to="/navigator">Navigator</NavItem>
             <NavItem to="/map">Map</NavItem>
             <NavItem to="/add-company">Directory</NavItem>
+            {isStaff && <NavItem to="/admin">Admin</NavItem>}
           </nav>
           <Link to="/navigator" className="btn-primary text-sm">Find Resources</Link>
         </div>

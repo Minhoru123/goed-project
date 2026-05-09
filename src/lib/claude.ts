@@ -19,8 +19,11 @@ function parseErrorMessage(raw: string): string {
   return raw;
 }
 
+export type Persona = 'founder' | 'investor' | 'provider';
+
 export interface StreamMatchOptions {
   journeyStep?: number;
+  persona?: Persona;
   signal?: AbortSignal;
 }
 
@@ -33,7 +36,7 @@ export async function streamMatch(
     const res = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userInput, journeyStep: options.journeyStep }),
+      body: JSON.stringify({ userInput, journeyStep: options.journeyStep, persona: options.persona }),
       signal: options.signal,
     });
 

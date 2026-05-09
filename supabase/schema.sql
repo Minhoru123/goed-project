@@ -235,3 +235,27 @@ create policy if not exists "submissions_staff_update"
   for update
   using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
   with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+-- Staff can grant/revoke membership directly when they approve a claim.
+create policy if not exists "memberships_staff_insert"
+  on public.company_memberships
+  for insert
+  with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "memberships_staff_update"
+  on public.company_memberships
+  for update
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
+  with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+create policy if not exists "memberships_staff_select"
+  on public.company_memberships
+  for select
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+
+-- Staff can apply approved company updates directly to the companies row.
+create policy if not exists "companies_staff_update"
+  on public.companies
+  for update
+  using (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
+  with check (exists (select 1 from public.staff_users s where lower(s.email) = lower(coalesce(auth.jwt() ->> 'email', ''))));

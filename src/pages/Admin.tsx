@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import {
+  approveClaimRequest,
+  approveUpdateRequest,
+  denyClaimRequest,
   listPendingClaimRequests,
   listPendingUpdateRequests,
-  setClaimRequestStatus,
-  setUpdateRequestStatus,
+  rejectUpdateRequest,
   type PendingClaimRequest,
   type PendingUpdateRequest,
 } from '../lib/companyDirectoryBackend';
@@ -102,7 +104,11 @@ export default function Admin() {
               onAction={async (status) => {
                 setBusyId(claim.id);
                 try {
-                  await setClaimRequestStatus(claim.id, status);
+                  if (status === 'approved') {
+                    await approveClaimRequest(claim.id);
+                  } else {
+                    await denyClaimRequest(claim.id);
+                  }
                   setClaims((prev) => prev.filter((entry) => entry.id !== claim.id));
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'Failed to update claim.');
@@ -128,7 +134,11 @@ export default function Admin() {
               onAction={async (status) => {
                 setBusyId(update.id);
                 try {
-                  await setUpdateRequestStatus(update.id, status);
+                  if (status === 'approved') {
+                    await approveUpdateRequest(update.id);
+                  } else {
+                    await rejectUpdateRequest(update.id);
+                  }
                   setUpdates((prev) => prev.filter((entry) => entry.id !== update.id));
                 } catch (err) {
                   setError(err instanceof Error ? err.message : 'Failed to update request.');

@@ -284,22 +284,119 @@ export async function listPendingUpdateRequests(): Promise<PendingUpdateRequest[
   }));
 }
 
-export async function setClaimRequestStatus(requestId: string, status: 'approved' | 'denied'): Promise<void> {
+/**
+ * Approve a claim. This both:
+ *   1. Marks the request as approved.
+ *   2. Inserts an active 'owner' membership for the claimant if one doesn't already exist.
+ * Idempotent — safe to retry.
+ */
+export async function approveClaimRequest(requestId: string): Promise<void> {
+  const supabase = requireSupabase();
+  const { data: claim, error: fetchError } = await supabase
+    .from('company_claim_requests')
+    .select('company_id, claimant_user_id')
+    .eq('id', requestId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const { error: membershipError } = await supabase.from('company_memberships').upsert(
+    {
+      company_id: claim.company_id,
+      user_id: claim.claimant_user_id,
+      role: 'owner',
+      status: 'active',
+    },
+    { onConflict: 'company_id,user_id' }
+  );
+  if (membershipError) throw new Error(membershipError.message);
+
+  const { error: statusError } = await supabase
+    .from('company_claim_requests')
+    .update({ review_status: 'approved' })
+    .eq('id', requestId);
+  if (statusError) throw new Error(statusError.message);
+}
+
+export async function denyClaimRequest(requestId: string): Promise<void> {
   const supabase = requireSupabase();
   const { error } = await supabase
     .from('company_claim_requests')
-    .update({ review_status: status })
+    .update({ review_status: 'denied' })
     .eq('id', requestId);
   if (error) throw new Error(error.message);
 }
 
-export async function setUpdateRequestStatus(requestId: string, status: 'approved' | 'rejected'): Promise<void> {
+/**
+ * Approve an update request. If the request includes parseable proposed profile data
+ * (JSON object with snake_case column keys), apply it to the companies row.
+ * Otherwise, just mark the request approved — the requester can apply edits live
+ * through their existing membership.
+ */
+export async function approveUpdateRequest(requestId: string): Promise<void> {
+  const supabase = requireSupabase();
+  const { data: update, error: fetchError } = await supabase
+    .from('company_update_requests')
+    .select('company_id, proposed_profile_data')
+    .eq('id', requestId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
+  const patch = parseProfilePatch(update.proposed_profile_data as string | null);
+  if (patch) {
+    const { error: applyError } = await supabase
+      .from('companies')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', update.company_id);
+    if (applyError) throw new Error(applyError.message);
+  }
+
+  const { error: statusError } = await supabase
+    .from('company_update_requests')
+    .update({ review_status: 'approved' })
+    .eq('id', requestId);
+  if (statusError) throw new Error(statusError.message);
+}
+
+export async function rejectUpdateRequest(requestId: string): Promise<void> {
   const supabase = requireSupabase();
   const { error } = await supabase
     .from('company_update_requests')
-    .update({ review_status: status })
+    .update({ review_status: 'rejected' })
     .eq('id', requestId);
   if (error) throw new Error(error.message);
+}
+
+const ALLOWED_PATCH_KEYS = new Set<string>([
+  'name',
+  'website',
+  'linkedin',
+  'address',
+  'city',
+  'description',
+  'stage',
+  'employees',
+  'sector',
+  'founded_year',
+  'hiring',
+  'jobs_url',
+  'photo_url',
+  'photo_urls',
+  'contact_email',
+]);
+
+function parseProfilePatch(raw: string | null): Record<string, unknown> | null {
+  if (!raw || !raw.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const safe: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (ALLOWED_PATCH_KEYS.has(key)) safe[key] = value;
+    }
+    return Object.keys(safe).length > 0 ? safe : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function updateOwnedCompany(companyId: string, profile: CompanyProfileInput): Promise<Company> {

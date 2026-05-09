@@ -11,7 +11,7 @@ export default function JourneyPicker({ value, onChange }: Props) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-utah-stone/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-utah-stone/80">
           Where are you in the 19-step Utah entrepreneur journey?
         </p>
         {value && (
@@ -28,7 +28,7 @@ export default function JourneyPicker({ value, onChange }: Props) {
       <div className="space-y-2">
         {PHASES.map((phase) => (
           <div key={phase}>
-            <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-utah-stone/50">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-utah-stone/85">
               {phase}
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -46,7 +46,7 @@ export default function JourneyPicker({ value, onChange }: Props) {
                     }`}
                     title={`Step ${step.n}: ${step.title}`}
                   >
-                    <span className={`font-mono font-bold ${selected ? 'text-utah-gold' : 'text-utah-stone/50 group-hover:text-utah-gold'}`}>
+                    <span className={`font-mono font-bold ${selected ? 'text-utah-gold' : 'text-utah-stone/85 group-hover:text-utah-gold'}`}>
                       {step.n}
                     </span>
                     <span className="hidden sm:inline">{step.title}</span>
@@ -59,7 +59,7 @@ export default function JourneyPicker({ value, onChange }: Props) {
       </div>
 
       {value !== null && (
-        <p className="mt-3 text-xs text-utah-stone/70">
+        <p className="mt-3 text-xs text-utah-stone/85">
           You're at <strong className="text-utah-gold">Step {value}: {JOURNEY_STEPS[value - 1].title}</strong>.
           Matches will be tailored to this step.
         </p>

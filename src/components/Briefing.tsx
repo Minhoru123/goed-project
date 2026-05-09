@@ -17,25 +17,35 @@ export interface BriefingData {
 }
 
 export function parseBriefing(text: string): BriefingData | null {
-  const match = text.match(/```json\s*([\s\S]*?)```/i);
-  if (!match) return null;
-  try {
-    const parsed = JSON.parse(match[1]);
-    if (
-      typeof parsed?.founder_summary === 'string' &&
-      Array.isArray(parsed?.top_picks) &&
-      typeof parsed?.intro_email === 'string'
-    ) {
-      return parsed as BriefingData;
+  for (const candidate of extractBriefingCandidates(text)) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (
+        typeof parsed?.founder_summary === 'string' &&
+        Array.isArray(parsed?.top_picks) &&
+        typeof parsed?.intro_email === 'string'
+      ) {
+        return parsed as BriefingData;
+      }
+    } catch {
+      // Try the next candidate shape.
     }
-    return null;
-  } catch {
-    return null;
   }
+  return null;
 }
 
 export function stripBriefingBlock(text: string): string {
-  return text.replace(/```json\s*[\s\S]*?```\s*$/i, '').trim();
+  const fencedStart = text.search(/```json\b/i);
+  if (fencedStart >= 0) {
+    return text.slice(0, fencedStart).trim();
+  }
+
+  const rawJsonStart = text.search(/\{\s*"founder_summary"\s*:/i);
+  if (rawJsonStart >= 0) {
+    return text.slice(0, rawJsonStart).trim();
+  }
+
+  return text.trim();
 }
 
 export default function Briefing({ data }: { data: BriefingData }) {
@@ -88,7 +98,7 @@ export default function Briefing({ data }: { data: BriefingData }) {
       </div>
 
       <div className="mt-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-utah-stone/60">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-utah-stone/80">
           Top 3 next moves
         </p>
         <div className="grid gap-3 md:grid-cols-3">
@@ -108,9 +118,9 @@ export default function Briefing({ data }: { data: BriefingData }) {
                 )}
               </div>
               <h3 className="font-display text-base font-semibold leading-tight">{p.name}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-utah-stone/75">{p.why}</p>
-              <div className="mt-3 rounded-md border border-utah-stone/10 bg-utah-slate/40 p-2.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-utah-stone/50">
+              <p className="mt-2 text-sm leading-relaxed text-utah-stone/85">{p.why}</p>
+              <div className="mt-3 rounded-md border border-utah-stone/10 bg-utah-dark/35 p-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-utah-stone/85">
                   Do this next
                 </p>
                 <p className="mt-1 text-sm text-utah-stone/90">{p.next_step}</p>
@@ -142,16 +152,16 @@ export default function Briefing({ data }: { data: BriefingData }) {
       <div className="card mt-4">
         <div className="mb-2 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-utah-stone/60">
+            <p className="text-xs font-semibold uppercase tracking-wide text-utah-stone/80">
               Ready-to-send intro email
             </p>
-            <p className="text-sm text-utah-stone/70">Copy this and email any of the programs above.</p>
+            <p className="text-sm text-utah-stone/85">Copy this and email any of the programs above.</p>
           </div>
           <button className="btn-secondary text-xs print:hidden" onClick={copyEmailFlash}>
             {emailCopied ? 'Copied!' : 'Copy email'}
           </button>
         </div>
-        <pre className="mt-2 whitespace-pre-wrap rounded-md border border-utah-stone/15 bg-utah-slate/40 p-4 font-sans text-sm text-utah-stone/90">
+        <pre className="mt-2 whitespace-pre-wrap rounded-md border border-utah-stone/15 bg-utah-dark/35 p-4 font-sans text-sm text-utah-stone/90">
           {data.intro_email}
         </pre>
       </div>
@@ -177,4 +187,22 @@ ${picks}
 Intro email
 ${d.intro_email}
 `;
+}
+
+function extractBriefingCandidates(text: string): string[] {
+  const candidates: string[] = [];
+  const fenced = text.match(/```json\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    candidates.push(fenced[1].trim());
+  }
+
+  const rawStart = text.search(/\{\s*"founder_summary"\s*:/i);
+  if (rawStart >= 0) {
+    const rawCandidate = text.slice(rawStart).trim();
+    if (rawCandidate) {
+      candidates.push(rawCandidate);
+    }
+  }
+
+  return candidates;
 }

@@ -38,7 +38,7 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
               </span>
             )}
           </div>
-          <p className="text-sm text-utah-stone/70">
+          <p className="text-sm text-utah-stone/85">
             {[city, company.sector, company.employees].filter(Boolean).join(' · ') || 'Utah company profile'}
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
 
       {company.description && (
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">What they do</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/85">What they do</p>
           <p className="max-w-3xl text-base leading-relaxed text-utah-stone/85">{company.description}</p>
         </div>
       )}
@@ -70,7 +70,7 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">Address</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/85">Address</p>
           <p className="mt-2 text-sm text-utah-stone/85">{company.address}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <a
@@ -93,12 +93,12 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
         </section>
 
         <section className="rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">Links</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/85">Links</p>
           <div className="mt-3 space-y-2">
             {website && <LinkRow label="Website" href={website} text={website.replace(/^https?:\/\//, '').replace(/\/$/, '')} />}
             {linkedin && <LinkRow label="LinkedIn" href={linkedin} text={linkedin.replace(/^https?:\/\//, '').replace(/\/$/, '')} />}
             {jobsUrl && <LinkRow label="Jobs" href={jobsUrl} text={jobsUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')} />}
-            {!website && !linkedin && !jobsUrl && <p className="text-sm text-utah-stone/60">No public links listed yet.</p>}
+            {!website && !linkedin && !jobsUrl && <p className="text-sm text-utah-stone/80">No public links listed yet.</p>}
           </div>
         </section>
       </div>
@@ -109,7 +109,7 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-utah-stone/10 bg-utah-dark/35 p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/55">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-stone/85">{label}</p>
       <p className="mt-2 text-sm font-medium text-utah-stone">{value}</p>
     </div>
   );
@@ -121,10 +121,10 @@ function LinkRow({ label, href, text }: { label: string; href: string; text: str
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center justify-between rounded-xl border border-utah-stone/10 bg-utah-slate/50 px-3 py-2 text-sm text-utah-stone transition hover:border-utah-gold/40 hover:text-utah-gold"
+      className="flex items-center justify-between rounded-xl border border-utah-stone/10 bg-white px-3 py-2 text-sm text-utah-stone transition hover:border-utah-gold/40 hover:text-utah-gold"
     >
       <span className="font-semibold">{label}</span>
-      <span className="truncate pl-3 text-utah-stone/65">{text}</span>
+      <span className="truncate pl-3 text-utah-stone/80">{text}</span>
     </a>
   );
 }

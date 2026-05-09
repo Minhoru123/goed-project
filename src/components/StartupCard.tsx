@@ -25,12 +25,12 @@ export default function StartupCard({ company, cityLabel, selected, onSelect }: 
       <div className="flex items-start justify-between gap-2">
         <div className="font-semibold text-utah-stone">{company.name}</div>
         {company.stage && (
-          <span className="shrink-0 rounded-full bg-utah-sand/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-utah-stone">
+          <span className="shrink-0 rounded-full bg-utah-dark/35/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-utah-stone">
             {company.stage}
           </span>
         )}
       </div>
-      <div className="mt-1 text-xs text-utah-stone/60">
+      <div className="mt-1 text-xs text-utah-stone/80">
         {[cityLabel ?? company.city, company.sector, company.employees].filter(Boolean).join(' · ')}
       </div>
       {company.description && (
@@ -48,7 +48,7 @@ export default function StartupCard({ company, cityLabel, selected, onSelect }: 
         </a>
       )}
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-utah-stone/45">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-utah-stone/80">
           {selected ? 'Selected on map' : 'Open on map'}
         </span>
         <Link

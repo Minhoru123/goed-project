@@ -145,10 +145,10 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-utah-stone/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-utah-stone/80">
           Step {step + 1} of {totalSteps}
         </p>
-        <p className="text-xs text-utah-stone/50">~30 seconds</p>
+        <p className="text-xs text-utah-stone/85">~30 seconds</p>
       </div>
       <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-utah-stone/10">
         <div
@@ -160,7 +160,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
       {step === 0 && (
         <div>
           <h2 className="mb-1 font-display text-2xl font-semibold">What kind of business?</h2>
-          <p className="mb-4 text-sm text-utah-stone/60">Pick the closest match. We'll personalize from here.</p>
+          <p className="mb-4 text-sm text-utah-stone/80">Pick the closest match. We'll personalize from here.</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {BUSINESS_TYPES.map((b) => {
               const on = businessType === b.id;
@@ -178,7 +178,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
                   <div className={`text-sm font-semibold ${on ? 'text-utah-gold' : 'text-utah-stone'}`}>
                     {b.label}
                   </div>
-                  <div className="text-xs text-utah-stone/55">{b.subtitle}</div>
+                  <div className="text-xs text-utah-stone/85">{b.subtitle}</div>
                 </button>
               );
             })}
@@ -189,7 +189,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
       {step === 1 && (
         <div>
           <h2 className="mb-1 font-display text-2xl font-semibold">Where in Utah?</h2>
-          <p className="mb-4 text-sm text-utah-stone/60">Programs and incentives vary by region.</p>
+          <p className="mb-4 text-sm text-utah-stone/80">Programs and incentives vary by region.</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {REGIONS.map((r) => {
               const on = region === r.id;
@@ -207,7 +207,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
                   <div className={`text-sm font-semibold ${on ? 'text-utah-gold' : 'text-utah-stone'}`}>
                     {r.label}
                   </div>
-                  <div className="text-xs text-utah-stone/55">{r.subtitle}</div>
+                  <div className="text-xs text-utah-stone/85">{r.subtitle}</div>
                 </button>
               );
             })}
@@ -218,7 +218,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
       {step === 2 && (
         <div>
           <h2 className="mb-1 font-display text-2xl font-semibold">How far along are you?</h2>
-          <p className="mb-4 text-sm text-utah-stone/60">Be honest — we tune the matches to where you actually are.</p>
+          <p className="mb-4 text-sm text-utah-stone/80">Be honest — we tune the matches to where you actually are.</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {STAGES.map((s) => {
               const on = stage === s.id;
@@ -238,7 +238,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
                     <div className={`text-sm font-semibold ${on ? 'text-utah-gold' : 'text-utah-stone'}`}>
                       {s.label}
                     </div>
-                    <div className="text-xs text-utah-stone/55">{s.subtitle}</div>
+                    <div className="text-xs text-utah-stone/85">{s.subtitle}</div>
                   </div>
                 </button>
               );
@@ -250,7 +250,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
       {step === 3 && (
         <div>
           <h2 className="mb-1 font-display text-2xl font-semibold">What do you need next?</h2>
-          <p className="mb-4 text-sm text-utah-stone/60">Pick as many as apply.</p>
+          <p className="mb-4 text-sm text-utah-stone/80">Pick as many as apply.</p>
           <div className="flex flex-wrap gap-2">
             {NEEDS.map((n) => {
               const on = needs.includes(n.id);
@@ -271,7 +271,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
             })}
           </div>
           {needs.length > 0 && (
-            <p className="mt-3 text-xs text-utah-stone/50">
+            <p className="mt-3 text-xs text-utah-stone/85">
               {needs.length} selected — tap a chip again to remove it.
             </p>
           )}
@@ -281,7 +281,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
       {step === 4 && (
         <div>
           <h2 className="mb-1 font-display text-2xl font-semibold">Anything else?</h2>
-          <p className="mb-4 text-sm text-utah-stone/60">
+          <p className="mb-4 text-sm text-utah-stone/80">
             Optional. Specifics help — funding amount, timeline, who you serve, what you've tried.
           </p>
           <textarea
@@ -298,7 +298,7 @@ export default function FounderQuiz({ onSubmit, disabled }: Props) {
           type="button"
           onClick={back}
           disabled={step === 0 || disabled}
-          className="text-sm text-utah-stone/60 hover:text-utah-stone disabled:opacity-30"
+          className="text-sm text-utah-stone/80 hover:text-utah-stone disabled:opacity-30"
         >
           ← Back
         </button>

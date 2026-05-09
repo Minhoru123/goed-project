@@ -48,6 +48,10 @@ export function stripBriefingBlock(text: string): string {
   return text.trim();
 }
 
+function hasPublicUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim());
+}
+
 export default function Briefing({ data }: { data: BriefingData }) {
   const [copied, setCopied] = useState(false);
 
@@ -126,15 +130,21 @@ export default function Briefing({ data }: { data: BriefingData }) {
                 <p className="mt-1 text-sm text-utah-stone/90">{p.next_step}</p>
               </div>
               <div className="mt-auto flex gap-2 pt-3">
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 rounded-md bg-utah-gold px-3 py-1.5 text-center text-xs font-semibold text-white"
-                  style={{ color: '#ffffff' }}
-                >
-                  Open program
-                </a>
+                {hasPublicUrl(p.url) ? (
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 rounded-md bg-utah-gold px-3 py-1.5 text-center text-xs font-semibold text-white"
+                    style={{ color: '#ffffff' }}
+                  >
+                    Open program
+                  </a>
+                ) : (
+                  <span className="flex-1 rounded-md bg-utah-stone/15 px-3 py-1.5 text-center text-xs font-semibold text-utah-stone/75">
+                    No public link
+                  </span>
+                )}
                 {p.email && (
                   <a
                     href={`mailto:${p.email}`}

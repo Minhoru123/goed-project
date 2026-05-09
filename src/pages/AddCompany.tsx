@@ -2,12 +2,12 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import {
-  claimCompanyOwnership,
   createCompanyWithOwner,
   getActiveMembership,
+  submitClaimRequest,
+  submitUpdateRequest,
   type CompanyMembership,
   type CompanyProfileInput,
-  updateOwnedCompany,
 } from '../lib/companyDirectoryBackend';
 import { cleanCity, getEmailDomain, getKnownCities, getWebsiteDomain } from '../lib/companyMeta';
 import { loadCompanies } from '../lib/loadData';
@@ -279,7 +279,8 @@ export default function AddCompany() {
     }
   }
 
-  async function handleClaimCompany() {
+  async function handleClaimCompany(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!claimVerification.ok || !user?.id || !selectedCompany) {
       setClaimStatus('error');
       setClaimMessage(claimVerification.label);
@@ -288,11 +289,18 @@ export default function AddCompany() {
 
     setClaimStatus('submitting');
     setClaimMessage(null);
+    const data = new FormData(event.currentTarget);
     try {
-      const nextMembership = await claimCompanyOwnership(selectedCompany.id, user.id);
-      setMembership(nextMembership);
+      await submitClaimRequest(selectedCompany.id, user.id, {
+        claimantEmail: authenticatedEmail,
+        claimantName: requiredString(data, 'claimant_name'),
+        claimantRole: requiredString(data, 'claimant_role'),
+        requestedChanges:
+          optionalString(data, 'requested_changes') ??
+          'Requesting ownership verification and access to update the public company profile.',
+      });
       setClaimStatus('success');
-      setClaimMessage('Company access verified. The live profile editor is unlocked below.');
+      setClaimMessage('Claim request submitted. Staff review will activate company access after verification.');
     } catch (error) {
       setClaimStatus('error');
       setClaimMessage(error instanceof Error ? error.message : 'Company claim failed.');
@@ -301,7 +309,7 @@ export default function AddCompany() {
 
   async function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedCompany || !hasActiveMembership) return;
+    if (!selectedCompany || !hasActiveMembership || !user?.id || !authenticatedEmail) return;
 
     setEditStatus('submitting');
     setEditMessage(null);
@@ -309,10 +317,15 @@ export default function AddCompany() {
     const data = new FormData(form);
 
     try {
-      const updated = await updateOwnedCompany(selectedCompany.id, buildProfileInput(data, authenticatedEmail || null));
-      setCompanies((current) => current.map((company) => (company.id === updated.id ? updated : company)));
+      await submitUpdateRequest(selectedCompany.id, user.id, {
+        requesterEmail: authenticatedEmail,
+        requesterName: requiredString(data, 'requester_name'),
+        requesterRole: requiredString(data, 'requester_role'),
+        requestedChanges: requiredString(data, 'requested_changes'),
+        profile: buildProfileInput(data, authenticatedEmail || null),
+      });
       setEditStatus('success');
-      setEditMessage('Live profile updated.');
+      setEditMessage('Update request submitted. The public profile will change after staff approval.');
     } catch (error) {
       setEditStatus('error');
       setEditMessage(error instanceof Error ? error.message : 'Profile update failed.');
@@ -353,14 +366,14 @@ export default function AddCompany() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-utah-gold">Company updates</p>
         <h1 className="mt-3 font-display text-4xl font-bold text-utah-stone">Add, claim, or update a company.</h1>
         <p className="mt-3 max-w-2xl text-base text-utah-stone/85">
-          Verified company owners can publish and edit their profile directly. No redeploy required.
+          Verified owners can publish new listings directly. Existing profiles now use a staff-reviewed claim and update flow. No redeploy required.
         </p>
       </section>
 
       <section className="mb-6 rounded-3xl border border-utah-stone/10 bg-utah-slate p-3">
         <div className="grid gap-2 sm:grid-cols-3">
           <ModeButton active={mode === 'add'} title="Add new listing" body="Publish a new company profile live." onClick={() => switchMode('add')} />
-          <ModeButton active={mode === 'claim'} title="Claim or update" body="Verify ownership, then edit live." onClick={() => switchMode('claim')} />
+          <ModeButton active={mode === 'claim'} title="Claim or update" body="Verify ownership, then submit changes for review." onClick={() => switchMode('claim')} />
           <ModeButton active={mode === 'ops'} title="Ops workflow" body="How staff keep edge cases moving." onClick={() => switchMode('ops')} />
         </div>
       </section>
@@ -620,7 +633,7 @@ function ClaimCompanyCard({
   verificationLabel: string;
   verificationOk: boolean;
   verificationTone: Tone;
-  onClaim: () => Promise<void>;
+  onClaim: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }) {
   const city = company ? cleanCity(company.city, company.address, knownCities) : null;
   const websiteDomain = company ? getWebsiteDomain(company.website) : null;
@@ -629,12 +642,12 @@ function ClaimCompanyCard({
     <div className="card">
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Claim and update workflow</p>
       <h2 className="mt-2 font-display text-3xl font-bold">
-        {hasActiveMembership ? 'Live company editor unlocked' : 'Verify ownership'}
+        {hasActiveMembership ? 'Profile update requests' : 'Request ownership review'}
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-utah-stone/85">
         {hasActiveMembership
-          ? 'You already have active company access. Save changes below and the profile updates immediately.'
-          : 'Sign in with a work email that matches the company website domain, then claim access in one click.'}
+          ? 'You already have active company access. Submit changes below and staff can review them before they go live.'
+          : 'Sign in with a work email that matches the company website domain, then submit a claim for staff review.'}
       </p>
 
       {company ? (
@@ -670,12 +683,24 @@ function ClaimCompanyCard({
       )}
 
       {!hasActiveMembership && (
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <p className="text-xs text-utah-stone/85">Basic verification uses an email-domain match against the public website on the profile.</p>
-          <button className="btn-primary text-sm" type="button" onClick={() => void onClaim()} disabled={!authReady || !verificationOk || claimStatus === 'submitting'}>
-            {claimStatus === 'submitting' ? 'Verifying…' : 'Verify and claim access'}
-          </button>
-        </div>
+        <form className="mt-6 space-y-4" onSubmit={onClaim}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Your name" name="claimant_name" required />
+            <Field label="Role at company" name="claimant_role" required placeholder="Founder, COO, Operations lead" />
+          </div>
+          <TextAreaField
+            label="What should staff know?"
+            name="requested_changes"
+            rows={3}
+            defaultValue="Requesting ownership verification and access to update this public company profile."
+          />
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-utah-stone/85">Basic verification uses an email-domain match against the public website on the profile.</p>
+            <button className="btn-primary text-sm" type="submit" disabled={!authReady || !verificationOk || claimStatus === 'submitting'}>
+              {claimStatus === 'submitting' ? 'Submitting…' : 'Submit claim for review'}
+            </button>
+          </div>
+        </form>
       )}
 
       {claimMessage && (
@@ -702,7 +727,7 @@ function OwnedCompanyEditor({
     <div className="card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Live profile editor</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Profile update request</p>
           <h2 className="mt-2 font-display text-3xl font-bold">Edit {company.name}</h2>
         </div>
         <Link to={`/companies/${company.id}`} className="btn-secondary text-sm">
@@ -749,12 +774,23 @@ function OwnedCompanyEditor({
           />
           <Field label="Job postings URL" name="job_postings" type="url" defaultValue={company.jobsUrl} />
         </div>
-        <Field label="Contact email" name="contact_email" type="email" />
+        <Field label="Contact email" name="contact_email" type="email" defaultValue={company.contactEmail} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Your name" name="requester_name" required />
+          <Field label="Role at company" name="requester_role" required placeholder="Founder, COO, Operations lead" />
+        </div>
+        <TextAreaField
+          label="Summary for staff review"
+          name="requested_changes"
+          rows={3}
+          required
+          placeholder="Summarize what changed and why it should be reflected on the public profile."
+        />
 
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-utah-stone/85">Saves directly to the live company profile.</p>
+          <p className="text-xs text-utah-stone/85">Submits a staff-reviewed update request instead of changing the public profile immediately.</p>
           <button className="btn-primary text-sm" type="submit" disabled={status === 'submitting'}>
-            {status === 'submitting' ? 'Saving…' : 'Save live profile'}
+            {status === 'submitting' ? 'Submitting…' : 'Submit update request'}
           </button>
         </div>
 
@@ -841,7 +877,7 @@ function OpsWorkflow() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <OpsCard step="1" title="Programs stay editable" body="Resources can come from the live Google Sheet feed, so non-technical staff can update them without a redeploy." />
-        <OpsCard step="2" title="Companies self-serve" body="Verified owners claim access with a matching work-email domain, then edit their profile live in the app." />
+        <OpsCard step="2" title="Companies self-serve" body="Verified owners request access with a matching work-email domain, then submit profile updates for staff review." />
         <OpsCard step="3" title="Staff handle exceptions" body="Unclaimed listings, bad website domains, and data cleanup cases stay in the manual support lane." />
       </div>
     </div>

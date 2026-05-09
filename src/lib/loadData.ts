@@ -22,6 +22,13 @@ function isNumberArray(value: unknown): value is number[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'number' && Number.isFinite(item));
 }
 
+function buildAppAssetUrl(path: string): string {
+  const base = import.meta.env.BASE_URL || '/';
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const normalizedPath = path.replace(/^\/+/, '');
+  return `${normalizedBase}${normalizedPath}`;
+}
+
 function isResource(value: unknown): value is Resource {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
@@ -43,7 +50,9 @@ function isNullableBoolean(value: unknown): value is boolean | null {
   return value === null || typeof value === 'boolean';
 }
 
-function isCompany(value: unknown): value is Omit<Company, 'photoUrls'> & { photoUrls?: unknown } {
+function isCompany(
+  value: unknown
+): value is Omit<Company, 'photoUrls' | 'contactEmail'> & { photoUrls?: unknown; contactEmail?: unknown } {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Record<string, unknown>;
   return (
@@ -62,19 +71,26 @@ function isCompany(value: unknown): value is Omit<Company, 'photoUrls'> & { phot
     isFiniteNumberOrNull(candidate.foundedYear) &&
     isNullableBoolean(candidate.hiring) &&
     isNullableString(candidate.jobsUrl) &&
-    isNullableString(candidate.photoUrl)
+    isNullableString(candidate.photoUrl) &&
+    (candidate.contactEmail === undefined || isNullableString(candidate.contactEmail))
   );
 }
 
-function normalizeCompany(raw: Omit<Company, 'photoUrls'> & { photoUrls?: unknown }): Company {
+function normalizeCompany(
+  raw: Omit<Company, 'photoUrls' | 'contactEmail'> & { photoUrls?: unknown; contactEmail?: unknown }
+): Company {
   const galleryFromField = isStringArray(raw.photoUrls) ? raw.photoUrls : [];
   const fallback = raw.photoUrl ? [raw.photoUrl] : [];
   const merged = galleryFromField.length > 0 ? galleryFromField : fallback;
-  return { ...raw, photoUrls: merged };
+  return {
+    ...raw,
+    photoUrls: merged,
+    contactEmail: typeof raw.contactEmail === 'string' ? raw.contactEmail : null,
+  };
 }
 
 async function loadStaticResources(): Promise<Resource[]> {
-  const response = await fetch('/data/resources.json');
+  const response = await fetch(buildAppAssetUrl('data/resources.json'));
   if (!response.ok) throw new Error('Failed to load resources.json');
   const data = (await response.json()) as unknown;
   if (!Array.isArray(data) || !data.every(isResource)) {
@@ -84,7 +100,7 @@ async function loadStaticResources(): Promise<Resource[]> {
 }
 
 async function loadStaticCompanies(): Promise<Company[]> {
-  const response = await fetch('/data/companies.json');
+  const response = await fetch(buildAppAssetUrl('data/companies.json'));
   if (!response.ok) throw new Error('Failed to load companies.json');
   const data = (await response.json()) as unknown;
   if (!Array.isArray(data) || !data.every(isCompany)) {
@@ -104,8 +120,14 @@ export async function loadResources(): Promise<Resource[]> {
       throw new Error('Live resource payload has an invalid shape');
     }
     return data;
-  } catch {
-    return loadStaticResources();
+  } catch (liveError) {
+    try {
+      return await loadStaticResources();
+    } catch (staticError) {
+      const liveMessage = liveError instanceof Error ? liveError.message : 'Live resources failed.';
+      const staticMessage = staticError instanceof Error ? staticError.message : 'Static resources failed.';
+      throw new Error(`${liveMessage}; fallback failed: ${staticMessage}`);
+    }
   }
 }
 

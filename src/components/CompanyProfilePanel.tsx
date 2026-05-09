@@ -13,6 +13,7 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
   const website = normalizeUrl(company.website);
   const linkedin = normalizeUrl(company.linkedin);
   const jobsUrl = normalizeUrl(company.jobsUrl);
+  const contactEmail = company.contactEmail?.trim() || null;
 
   return (
     <div className={`space-y-4 ${compact ? '' : 'card border-utah-gold/20'}`}>
@@ -102,7 +103,8 @@ export default function CompanyProfilePanel({ company, knownCities, compact = fa
             {website && <LinkRow label="Website" href={website} text={website.replace(/^https?:\/\//, '').replace(/\/$/, '')} />}
             {linkedin && <LinkRow label="LinkedIn" href={linkedin} text={linkedin.replace(/^https?:\/\//, '').replace(/\/$/, '')} />}
             {jobsUrl && <LinkRow label="Jobs" href={jobsUrl} text={jobsUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')} />}
-            {!website && !linkedin && !jobsUrl && <p className="text-sm text-utah-stone/80">No public links listed yet.</p>}
+            {contactEmail && <LinkRow label="Contact" href={`mailto:${contactEmail}`} text={contactEmail} />}
+            {!website && !linkedin && !jobsUrl && !contactEmail && <p className="text-sm text-utah-stone/80">No public links listed yet.</p>}
           </div>
         </section>
       </div>

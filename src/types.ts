@@ -31,6 +31,7 @@ export interface Company {
   jobsUrl: string | null;
   photoUrl: string | null;
   photoUrls: string[];
+  contactEmail: string | null;
 }
 
 export interface CompanySubmission {

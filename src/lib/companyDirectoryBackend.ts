@@ -1,5 +1,5 @@
 import type { Company } from '../types';
-import { normalizeUrl } from './companyMeta';
+import { getEmailDomain, getWebsiteDomain, normalizeUrl } from './companyMeta';
 import { geocodeAddress } from './geocode';
 import { requireSupabase } from './supabase';
 
@@ -32,6 +32,21 @@ export interface CompanyProfileInput {
   lng?: number | null;
 }
 
+export interface ClaimRequestInput {
+  claimantEmail: string;
+  claimantName: string;
+  claimantRole: string;
+  requestedChanges: string;
+}
+
+export interface UpdateRequestInput {
+  requesterEmail: string;
+  requesterName: string;
+  requesterRole: string;
+  requestedChanges: string;
+  profile: CompanyProfileInput;
+}
+
 type CompanyRow = {
   id: string;
   name: string;
@@ -50,7 +65,7 @@ type CompanyRow = {
   jobs_url: string | null;
   photo_url: string | null;
   photo_urls?: string[] | null;
-  contact_email?: string | null;
+  contact_email: string | null;
 };
 
 function slugCompanyName(value: string): string {
@@ -85,15 +100,11 @@ function mapCompany(row: CompanyRow): Company {
       : row.photo_url
         ? [row.photo_url]
         : [],
+    contactEmail: row.contact_email ?? null,
   };
 }
 
-function buildCompanyPayload(profile: CompanyProfileInput, userId?: string) {
-  const coordinates =
-    typeof profile.lat === 'number' && typeof profile.lng === 'number'
-      ? { lat: profile.lat, lng: profile.lng }
-      : {};
-
+function buildProfilePatch(profile: CompanyProfileInput) {
   return {
     name: profile.name.trim(),
     website: normalizeUrl(profile.website),
@@ -110,17 +121,48 @@ function buildCompanyPayload(profile: CompanyProfileInput, userId?: string) {
     photo_url: normalizeUrl(profile.photoUrl ?? profile.photoUrls[0] ?? null),
     photo_urls: profile.photoUrls.map((url) => normalizeUrl(url)).filter((url): url is string => !!url),
     contact_email: profile.contactEmail?.trim() || null,
+  };
+}
+
+function buildCompanyPayload(profile: CompanyProfileInput, userId?: string) {
+  const coordinates =
+    'lat' in profile || 'lng' in profile
+      ? { lat: profile.lat ?? null, lng: profile.lng ?? null }
+      : {};
+
+  return {
+    ...buildProfilePatch(profile),
     ...coordinates,
     updated_at: new Date().toISOString(),
     ...(userId ? { created_by_user_id: userId } : {}),
   };
 }
 
-function buildGeocodeQuery(profile: CompanyProfileInput): string {
-  const address = profile.address.trim();
-  const city = profile.city?.trim();
+function buildGeocodeQueryFromParts(addressValue: string, cityValue: string | null | undefined): string {
+  const address = addressValue.trim();
+  const city = cityValue?.trim();
   const includesCity = city ? address.toLowerCase().includes(city.toLowerCase()) : false;
   return [address, includesCity ? null : city, 'Utah', 'USA'].filter(Boolean).join(', ');
+}
+
+function buildGeocodeQuery(profile: CompanyProfileInput): string {
+  return buildGeocodeQueryFromParts(profile.address, profile.city);
+}
+
+async function withFreshCoordinates(profile: CompanyProfileInput): Promise<CompanyProfileInput> {
+  const coordinates = await geocodeAddress(buildGeocodeQuery(profile));
+  return {
+    ...profile,
+    lat: coordinates?.lat ?? null,
+    lng: coordinates?.lng ?? null,
+  };
+}
+
+function getVerificationStatus(email: string, website: string | null): 'verified' | 'failed' {
+  const emailDomain = getEmailDomain(email);
+  const websiteDomain = getWebsiteDomain(website);
+  if (!emailDomain || !websiteDomain) return 'failed';
+  return emailDomain === websiteDomain || emailDomain.endsWith(`.${websiteDomain}`) ? 'verified' : 'failed';
 }
 
 async function insertMembership(companyId: string, userId: string) {
@@ -141,7 +183,7 @@ export async function listLiveCompanies(): Promise<Company[]> {
   const supabase = requireSupabase();
   const { data, error } = await supabase
     .from('companies')
-    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
+    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls, contact_email')
     .order('name');
 
   if (error) {
@@ -176,8 +218,7 @@ export async function getActiveMembership(companyId: string, userId: string): Pr
 export async function createCompanyWithOwner(userId: string, profile: CompanyProfileInput): Promise<Company> {
   const supabase = requireSupabase();
   const baseId = slugCompanyName(profile.name) || 'company';
-  const coordinates = await geocodeAddress(buildGeocodeQuery(profile));
-  const profileWithCoordinates = coordinates ? { ...profile, ...coordinates } : profile;
+  const profileWithCoordinates = await withFreshCoordinates(profile);
 
   const attemptInsert = async (companyId: string) => {
     const { data, error } = await supabase
@@ -186,7 +227,7 @@ export async function createCompanyWithOwner(userId: string, profile: CompanyPro
         id: companyId,
         ...buildCompanyPayload(profileWithCoordinates, userId),
       })
-      .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
+      .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls, contact_email')
       .single();
 
     if (error) {
@@ -218,6 +259,63 @@ export async function claimCompanyOwnership(companyId: string, userId: string): 
     throw new Error('Company access could not be verified.');
   }
   return membership;
+}
+
+export async function submitClaimRequest(companyId: string, userId: string, request: ClaimRequestInput): Promise<void> {
+  const supabase = requireSupabase();
+  const { data: company, error: companyError } = await supabase
+    .from('companies')
+    .select('id, name, website')
+    .eq('id', companyId)
+    .single();
+
+  if (companyError) throw new Error(companyError.message);
+
+  const verificationStatus = getVerificationStatus(request.claimantEmail, company.website as string | null);
+  const { error } = await supabase.from('company_claim_requests').insert({
+    claimant_user_id: userId,
+    claimant_email: request.claimantEmail.trim().toLowerCase(),
+    company_id: companyId,
+    company_name: company.name,
+    claimant_name: request.claimantName.trim(),
+    claimant_role: request.claimantRole.trim(),
+    requested_changes: request.requestedChanges.trim(),
+    proposed_profile_data: null,
+    website_domain: getWebsiteDomain(company.website as string | null),
+    verification_status: verificationStatus,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function submitUpdateRequest(companyId: string, userId: string, request: UpdateRequestInput): Promise<void> {
+  const supabase = requireSupabase();
+  const membership = await getActiveMembership(companyId, userId);
+  if (!membership) {
+    throw new Error('Only active company owners can submit profile updates.');
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from('companies')
+    .select('id, name')
+    .eq('id', companyId)
+    .single();
+
+  if (companyError) throw new Error(companyError.message);
+
+  const proposedProfileData = JSON.stringify(buildProfilePatch(request.profile));
+  const { error } = await supabase.from('company_update_requests').insert({
+    requester_user_id: userId,
+    requester_email: request.requesterEmail.trim().toLowerCase(),
+    company_id: companyId,
+    company_name: company.name,
+    requester_name: request.requesterName.trim(),
+    requester_role: request.requesterRole.trim(),
+    requested_changes: request.requestedChanges.trim(),
+    proposed_profile_data: proposedProfileData,
+  });
+
+  if (error) throw new Error(error.message);
 }
 
 // ---------- Admin / staff approval queue ----------
@@ -346,9 +444,8 @@ export async function denyClaimRequest(requestId: string): Promise<void> {
 
 /**
  * Approve an update request. If the request includes parseable proposed profile data
- * (JSON object with snake_case column keys), apply it to the companies row.
- * Otherwise, just mark the request approved — the requester can apply edits live
- * through their existing membership.
+ * (JSON object with snake_case column keys), apply it to the companies row and
+ * refresh map coordinates when the location changed.
  */
 export async function approveUpdateRequest(requestId: string): Promise<void> {
   const supabase = requireSupabase();
@@ -361,9 +458,32 @@ export async function approveUpdateRequest(requestId: string): Promise<void> {
 
   const patch = parseProfilePatch(update.proposed_profile_data as string | null);
   if (patch) {
+    const { data: currentCompany, error: currentCompanyError } = await supabase
+      .from('companies')
+      .select('address, city')
+      .eq('id', update.company_id)
+      .single();
+    if (currentCompanyError) throw new Error(currentCompanyError.message);
+
+    const locationChanged =
+      typeof patch.address === 'string' || Object.prototype.hasOwnProperty.call(patch, 'city');
+    const companyUpdate: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
+
+    if (locationChanged) {
+      const nextAddress =
+        typeof patch.address === 'string' ? patch.address : (currentCompany.address as string);
+      const nextCity =
+        Object.prototype.hasOwnProperty.call(patch, 'city') && (patch.city === null || typeof patch.city === 'string')
+          ? (patch.city as string | null)
+          : (currentCompany.city as string | null);
+      const coordinates = await geocodeAddress(buildGeocodeQueryFromParts(nextAddress, nextCity));
+      companyUpdate.lat = coordinates?.lat ?? null;
+      companyUpdate.lng = coordinates?.lng ?? null;
+    }
+
     const { error: applyError } = await supabase
       .from('companies')
-      .update({ ...patch, updated_at: new Date().toISOString() })
+      .update(companyUpdate)
       .eq('id', update.company_id);
     if (applyError) throw new Error(applyError.message);
   }
@@ -419,11 +539,12 @@ function parseProfilePatch(raw: string | null): Record<string, unknown> | null {
 
 export async function updateOwnedCompany(companyId: string, profile: CompanyProfileInput): Promise<Company> {
   const supabase = requireSupabase();
+  const profileWithCoordinates = await withFreshCoordinates(profile);
   const { data, error } = await supabase
     .from('companies')
-    .update(buildCompanyPayload(profile))
+    .update(buildCompanyPayload(profileWithCoordinates))
     .eq('id', companyId)
-    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls')
+    .select('id, name, linkedin, address, city, lat, lng, description, website, stage, employees, sector, founded_year, hiring, jobs_url, photo_url, photo_urls, contact_email')
     .single();
 
   if (error) {

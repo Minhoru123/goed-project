@@ -384,7 +384,7 @@ export default function StartupMap() {
       <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Utah Startup Map</h1>
-          <p className="mt-1 text-sm text-utah-stone/70">
+          <p className="mt-1 text-sm text-utah-stone/85">
             {placed.length} mapped · {filtered.length} showing
           </p>
         </div>
@@ -424,7 +424,7 @@ export default function StartupMap() {
                 className={`rounded-full border px-3 py-1 text-xs transition ${
                   on
                     ? 'border-utah-gold bg-utah-gold/15 text-utah-gold'
-                    : 'border-utah-stone/20 text-utah-stone/70 hover:border-utah-gold/50 hover:text-utah-stone'
+                    : 'border-utah-stone/20 text-utah-stone/85 hover:border-utah-gold/50 hover:text-utah-stone'
                 }`}
                 title={m.desc}
               >
@@ -470,67 +470,33 @@ export default function StartupMap() {
 
       <div className="grid gap-4 md:grid-cols-[360px_1fr]">
         <aside className="flex h-[75vh] flex-col rounded-xl border border-utah-stone/10 bg-utah-slate">
-          <div className="space-y-2 border-b border-utah-stone/10 p-3">
+          <div className="space-y-3 border-b border-utah-stone/10 p-3">
             <input
-              className="w-full rounded-md border border-utah-stone/20 px-3 py-2 text-sm outline-none focus:border-utah-sky"
-              placeholder="Search name, city, description…"
+              className="w-full rounded-full border border-utah-stone/15 bg-utah-dark/40 px-4 py-2 text-sm outline-none focus:border-utah-gold"
+              placeholder="Search startups…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                className="rounded-md border border-utah-stone/20 px-2 py-2 text-sm"
-                value={sectorFilter}
-                onChange={(e) => setSectorFilter(e.target.value)}
+            <div className="flex flex-wrap gap-2">
+              <FilterChipSelect label="Sector" value={sectorFilter} options={sectors} onChange={setSectorFilter} />
+              <FilterChipSelect label="Stage" value={stageFilter} options={stages} onChange={setStageFilter} />
+              <FilterChipSelect label="Size" value={sizeFilter} options={sizes} onChange={setSizeFilter} />
+              <FilterChipSelect label="City" value={locationFilter} options={locations} onChange={setLocationFilter} />
+              <button
+                type="button"
+                onClick={() => setHiringFilter(hiringFilter === 'yes' ? '' : 'yes')}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  hiringFilter === 'yes'
+                    ? 'border-utah-gold bg-utah-gold/15 text-utah-gold'
+                    : 'border-utah-stone/20 bg-utah-dark/40 text-utah-stone/85 hover:border-utah-gold/50'
+                }`}
               >
-                <option value="">All sectors</option>
-                {sectors.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border border-utah-stone/20 px-2 py-2 text-sm"
-                value={stageFilter}
-                onChange={(e) => setStageFilter(e.target.value)}
-              >
-                <option value="">All stages</option>
-                {stages.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border border-utah-stone/20 px-2 py-2 text-sm"
-                value={sizeFilter}
-                onChange={(e) => setSizeFilter(e.target.value)}
-              >
-                <option value="">All sizes</option>
-                {sizes.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <select
-                className="rounded-md border border-utah-stone/20 px-2 py-2 text-sm"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              >
-                <option value="">All cities</option>
-                {locations.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <select
-                className="col-span-2 rounded-md border border-utah-stone/20 px-2 py-2 text-sm"
-                value={hiringFilter}
-                onChange={(e) => setHiringFilter(e.target.value as '' | 'yes' | 'no')}
-              >
-                <option value="">Hiring status: any</option>
-                <option value="yes">Hiring now</option>
-                <option value="no">Not hiring</option>
-              </select>
+                Hiring{hiringFilter === 'yes' && <span aria-hidden>✓</span>}
+              </button>
             </div>
             {anyFilter && (
               <button
-                className="text-xs text-utah-sky hover:underline"
+                className="text-xs font-semibold text-utah-gold hover:underline"
                 onClick={clearFilters}
                 type="button"
               >
@@ -541,7 +507,7 @@ export default function StartupMap() {
 
           <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto p-3">
             {filtered.length === 0 && (
-              <p className="text-sm text-utah-stone/60">No matches. Try clearing filters.</p>
+              <p className="text-sm text-utah-stone/80">No matches. Try clearing filters.</p>
             )}
             {filtered.map((c) => (
               <div key={c.id} data-id={c.id}>
@@ -705,5 +671,42 @@ export default function StartupMap() {
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterChipSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: readonly string[];
+  onChange: (value: string) => void;
+}) {
+  const active = !!value;
+  return (
+    <label
+      className={`relative inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+        active
+          ? 'border-utah-gold bg-utah-gold/15 text-utah-gold'
+          : 'border-utah-stone/20 bg-utah-dark/40 text-utah-stone/85 hover:border-utah-gold/50'
+      }`}
+    >
+      <span>{active ? value : label}</span>
+      <span aria-hidden className="text-[10px] opacity-60">▾</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="absolute inset-0 cursor-pointer opacity-0"
+        aria-label={label}
+      >
+        <option value="">All {label.toLowerCase()}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    </label>
   );
 }

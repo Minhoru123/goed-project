@@ -134,13 +134,13 @@ export default function Navigator() {
 
   const hasResult = output.length > 0 || streaming;
   const briefing = useMemo(() => (streaming ? null : parseBriefing(output)), [output, streaming]);
-  const visibleMarkdown = briefing ? stripBriefingBlock(output) : output;
+  const visibleMarkdown = stripBriefingBlock(output);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6">
         <h1 className="font-display text-3xl font-bold">Founder's Navigator</h1>
-        <p className="mt-1 text-utah-stone/70">
+        <p className="mt-1 text-utah-stone/85">
           Tell us about your startup in your own words. We'll match you to the right Utah programs in seconds.
         </p>
       </div>
@@ -151,7 +151,7 @@ export default function Navigator() {
           <div className="mt-6 border-t border-utah-stone/10 pt-4 text-center">
             <button
               type="button"
-              className="text-xs text-utah-stone/60 hover:text-utah-gold"
+              className="text-xs text-utah-stone/80 hover:text-utah-gold"
               onClick={() => setMode('freeform')}
             >
               I'd rather just type freely →
@@ -165,7 +165,7 @@ export default function Navigator() {
           <div className="mb-4">
             <button
               type="button"
-              className="text-xs text-utah-stone/60 hover:text-utah-gold"
+              className="text-xs text-utah-stone/80 hover:text-utah-gold"
               onClick={() => setMode('quiz')}
             >
               ← Back to the guided quiz
@@ -190,7 +190,7 @@ export default function Navigator() {
           />
 
           <div className="mt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-utah-stone/60">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-utah-stone/80">
               Or try a sample founder
             </p>
             <div className="flex flex-wrap gap-2">
@@ -209,7 +209,7 @@ export default function Navigator() {
           </div>
 
           <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs text-utah-stone/50">
+            <span className="text-xs text-utah-stone/85">
               {resources.length > 0 ? `${resources.length} resources loaded` : 'Loading resources…'}
             </span>
             <button className="btn-primary text-sm" onClick={() => submit()} disabled={streaming || !input.trim()}>
@@ -221,7 +221,7 @@ export default function Navigator() {
 
       {hasResult && (
         <div className="card flex items-center justify-between">
-          <span className="text-xs text-utah-stone/50">
+          <span className="text-xs text-utah-stone/85">
             {streaming ? 'Matching…' : 'Matches ready'}
           </span>
           <button className="btn-secondary text-sm" onClick={reset} disabled={streaming}>
@@ -236,18 +236,31 @@ export default function Navigator() {
         </div>
       )}
 
-      {hasResult && !briefing && (
+      {streaming && (
         <div className="card mt-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-xl font-semibold">
-              {streaming ? 'Personalizing your matches…' : 'Your matches'}
-            </h2>
-            {streaming && (
-              <span className="flex items-center gap-2 text-xs text-utah-stone/60">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-utah-gold" />
-                Live
-              </span>
-            )}
+            <h2 className="font-display text-xl font-semibold">Personalizing your matches…</h2>
+            <span className="flex items-center gap-2 text-xs text-utah-stone/80">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-utah-gold" />
+              Live
+            </span>
+          </div>
+          <div className="space-y-3">
+            <div className="h-4 w-2/3 rounded-full bg-utah-stone/10" />
+            <div className="h-4 w-full rounded-full bg-utah-stone/10" />
+            <div className="h-4 w-5/6 rounded-full bg-utah-stone/10" />
+            <div className="h-4 w-3/4 rounded-full bg-utah-stone/10" />
+            <p className="pt-2 text-sm text-utah-stone/80">
+              We&apos;re turning your input into ranked Utah matches and a clean founder briefing.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!streaming && hasResult && !briefing && (
+        <div className="card mt-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-xl font-semibold">Your matches</h2>
           </div>
           <div className="markdown-body text-utah-stone/90">
             {visibleMarkdown ? (
@@ -268,7 +281,7 @@ export default function Navigator() {
                 {visibleMarkdown}
               </ReactMarkdown>
             ) : (
-              <span className="text-sm text-utah-stone/60">Thinking…</span>
+              <span className="text-sm text-utah-stone/80">No formatted result available.</span>
             )}
           </div>
         </div>

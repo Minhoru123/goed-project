@@ -35,7 +35,7 @@ export default function CompanyProfile() {
         <div className="mb-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-utah-gold">Company directory</p>
           <h1 className="mt-2 font-display text-4xl font-bold">Company not found</h1>
-          <p className="mt-3 max-w-2xl text-base text-utah-stone/75">
+          <p className="mt-3 max-w-2xl text-base text-utah-stone/85">
             This profile may not exist yet, or the listing id changed.
           </p>
         </div>

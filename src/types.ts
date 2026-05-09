@@ -30,6 +30,7 @@ export interface Company {
   hiring: boolean | null;
   jobsUrl: string | null;
   photoUrl: string | null;
+  photoUrls: string[];
 }
 
 export interface CompanySubmission {

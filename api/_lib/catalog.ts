@@ -1,10 +1,7 @@
-import { createRequire } from 'node:module';
+import * as XLSX from 'xlsx';
 import { createClient } from '@supabase/supabase-js';
 import rawCompaniesJson from '../../public/data/companies.json';
 import rawResourcesJson from '../../public/data/resources.json';
-
-const require = createRequire(import.meta.url);
-const XLSX = require('xlsx');
 
 const STEP_KEYWORDS: Record<number, RegExp> = {
   1: /\b(idea(tion)?|brainstorm|find your big idea|just an idea|early concept)\b/i,
